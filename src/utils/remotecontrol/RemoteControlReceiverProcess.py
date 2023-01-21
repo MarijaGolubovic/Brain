@@ -45,7 +45,7 @@ class RemoteControlReceiverProcess(WorkerProcess):
         outPs : list(Pipe) 
             List of output pipes (order does not matter)
         """
-
+        
         super(RemoteControlReceiverProcess,self).__init__( inPs, outPs)
 
     # ===================================== RUN ==========================================
@@ -60,7 +60,7 @@ class RemoteControlReceiverProcess(WorkerProcess):
         """Initialize the communication socket server.
         """
         self.port       =   12244
-        self.serverIp   =   '0.0.0.0'
+        self.serverIp   =   '192.168.169.1'
 
         self.server_socket = socket.socket(
                                     family  = socket.AF_INET, 
@@ -91,10 +91,11 @@ class RemoteControlReceiverProcess(WorkerProcess):
 
                 bts     =  bts.decode()
                 command =  json.loads(bts)
-
+                #command = {'action': '1', 'speed': 0.00}
                 for outP in outPs:
                     outP.send(command)
 
+        
         except Exception as e:
             print(e)
 

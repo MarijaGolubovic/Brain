@@ -65,6 +65,7 @@ class CameraStreamerProcess(WorkerProcess):
     def _init_threads(self):
         """Initialize the sending thread.
         """
+        print("\n CameraStreamerProcess inited \n")
         if self._blocker.is_set():
             return
         streamTh = Thread(name='StreamSendingThread',target = self._send_thread, args= (self.inPs[0], ))
@@ -75,11 +76,12 @@ class CameraStreamerProcess(WorkerProcess):
     def _init_socket(self):
         """Initialize the socket client. 
         """
-        self.serverIp   =  '192.168.1.102' # PC ip
+        self.serverIp   =  '192.168.112.199' # PC ip
         self.port       =  2244            # com port
 
         self.client_socket = socket.socket()
         self.connection = None
+        print("socket created")
         # Trying repeatedly to connect the camera receiver.
         try:
             while self.connection is None and not self._blocker.is_set():

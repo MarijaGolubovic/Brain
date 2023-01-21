@@ -66,7 +66,7 @@ class SerialHandlerProcess(WorkerProcess):
         super(SerialHandlerProcess,self).run()
         #Post running process -> close the history file
         self.historyFile.close()
-
+         
     # ===================================== INIT THREADS =================================
     def _init_threads(self):
         """ Initializes the read and the write thread.
@@ -76,6 +76,7 @@ class SerialHandlerProcess(WorkerProcess):
         self.threads.append(readTh)
         writeTh = WriteThread(self.inPs[0], self.serialCom, self.historyFile)
         self.threads.append(writeTh)
+        
     
 
     

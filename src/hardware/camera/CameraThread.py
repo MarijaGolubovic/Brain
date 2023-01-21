@@ -85,18 +85,18 @@ class CameraThread(ThreadWithStop):
         
         # this how the firmware works.
         # the camera has to be imported here
-        from picamera import PiCamera
+        from picamera import PiCamera # picamera #PiCamera
 
         # camera
-        self.camera = PiCamera()
+        self.camera = PiCamera() #PiCamera
 
         # camera settings
         self.camera.resolution      =   (1640,1232)
         self.camera.framerate       =   15
 
-        self.camera.brightness      =   50
+        self.camera.brightness      =   55
         self.camera.shutter_speed   =   1200
-        self.camera.contrast        =   0
+        self.camera.contrast        =   5
         self.camera.iso             =   0 # auto
         
 
@@ -127,10 +127,11 @@ class CameraThread(ThreadWithStop):
             data  = np.frombuffer(data, dtype=np.uint8)
             data  = np.reshape(data, (480, 640, 3))
             stamp = time.time()
-
+            
             # output image and time stamp
             # Note: The sending process can be blocked, when doesn't exist any consumer process and it reaches the limit size.
             for outP in self.outPs:
+                print("bilo sta \n")
                 outP.send([[stamp], data])
 
             

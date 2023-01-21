@@ -33,7 +33,7 @@ import threading
 import signal
 import time
 
-from src.hardware.IMU import imu
+from src.hardware.IMU.imu import imu
 
 def exit_handler(signum, frame):
 	IMU.stop()

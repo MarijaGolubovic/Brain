@@ -29,7 +29,7 @@
 # Module imports
 import time
 # Module required for getting semaphore broadcast messages
-import trafficlights
+import src.data.trafficlights.trafficlights as trafficlights
 
 ## Method for running the listener example.
 #  @param none

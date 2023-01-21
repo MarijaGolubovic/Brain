@@ -34,28 +34,32 @@ sys.path.append('.')
 
 import time
 import signal
+from src.data.trafficlights.TrafficLights import TraficDetector
 from multiprocessing import Pipe, Process, Event 
 
 # hardware imports
-from src.hardware.camera.CameraProcess                      import CameraProcess
+from src.hardware.camera.cameraprocess                      import CameraProcess
 from src.hardware.camera.CameraSpooferProcess               import CameraSpooferProcess
 from src.hardware.serialhandler.SerialHandlerProcess        import SerialHandlerProcess
 
 # utility imports
 from src.utils.camerastreamer.CameraStreamerProcess         import CameraStreamerProcess
 from src.utils.remotecontrol.RemoteControlReceiverProcess   import RemoteControlReceiverProcess
+from src.utils.linedetection.line                           import LineDetection
 
+from src.utils.Stop.DistanceDetector                        import Distance 
 # =============================== CONFIG =================================================
 enableStream        =  True
 enableCameraSpoof   =  False 
-enableRc            =  True
-
+enableRc            =  False
+enableData          =  False
 # =============================== INITIALIZING PROCESSES =================================
 allProcesses = list()
-
+# rcSer, camSer = Pipe(duplex = false)      camera salje komande autu
 # =============================== HARDWARE ===============================================
 if enableStream:
-    camStR, camStS = Pipe(duplex = False)           # camera  ->  streamer
+    camStR, camStS = Pipe(duplex = False)           # camera  ->  line
+    camLineStR, camLineSts = Pipe(duplex = False)       # line    ->  streamer
 
     if enableCameraSpoof:
         camSpoofer = CameraSpooferProcess([],[camStS],'vid')
@@ -64,14 +68,41 @@ if enableStream:
     else:
         camProc = CameraProcess([],[camStS])
         allProcesses.append(camProc)
-
-    streamProc = CameraStreamerProcess([camStR], [])
-    allProcesses.append(streamProc)
+    
+    camLine = LineDetection([camStR],[])  
+    allProcesses.append(camLine)
+    #cv2.imshow(camLineStR.recv(), 'line')
+    #camLine = CameralineFolow([camStR],[camSer])  salje komande na proces za serisuku komunikaciju
+    #allProcess.append(camLine)
+    #camSign = CameraDetevtSign([camStR],[camSer])
+    #allProcess.append(camSigh)
+    
+    #streamProc = CameraStreamerProcess([camLineStR], [])
+    #allProcesses.append(streamProc)
+    #streamProc = CameraStreamerProcess([camStR], [])
+    #allProcesses.append(streamProc)
 
 
 # =============================== DATA ===================================================
 #LocSys client process
-# LocStR, LocStS = Pipe(duplex = False)           # LocSys  ->  brain
+if enableData:
+    LocStR, LocStS = Pipe(duplex = False)
+    # Semaphore colors list
+        
+    
+       # if Semaphores.s1_state == 2:
+        #    LocStS = {'action': '1', 'speed': 0.3}
+        #else:
+         #   locStS = {'action': '1', 'speed': 0.0}
+        # Stop the listener
+    
+    #rcProc = RemoteControlReceiverProcess([],[LocStS])
+    #allProcesses.append(rcProc)
+    shProc = SerialHandlerProcess([LocStR], [])
+    allProcesses.append(shProc)
+    trafficlightProc = TraficDetector([],[LocStS])
+    allProcesses.append(trafficlightProc)          # LocSys  ->  brain
+   
 # from data.localisationsystem.locsys import LocalisationSystemProcess
 # LocSysProc = LocalisationSystemProcess([], [LocStS])
 # allProcesses.append(LocSysProc)
@@ -85,16 +116,25 @@ if enableRc:
     # serial handler process
     shProc = SerialHandlerProcess([rcShR], [])
     allProcesses.append(shProc)
-
+    
+    #shProc = SerialHandlerProcess([rcSer], [])     prima podatke od kamere i salje na nukleus
+    #allProcesses.append(shProc)
+    #print(rcShS)
+    #rcShS = {'action': '1', 'speed': 0.18}
+    #test = Distance([],[rcShS])
+    #allProcesses.append(test)
+    
     rcProc = RemoteControlReceiverProcess([],[rcShS])
     allProcesses.append(rcProc)
 
+# ==================================================
 
 # ===================================== START PROCESSES ==================================
 print("Starting the processes!",allProcesses)
 for proc in allProcesses:
     proc.daemon = True
     proc.start()
+    #print(proc)
 
 
 # ===================================== STAYING ALIVE ====================================
