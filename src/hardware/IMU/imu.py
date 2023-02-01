@@ -39,7 +39,7 @@ class imu(threading.Thread):
         threading.Thread.__init__(self)
         self.running = True
         
-        print(sys.path)
+        #print(sys.path)
 
         self.SETTINGS_FILE = "RTIMULib"
         print("Using settings file " + self.SETTINGS_FILE + ".ini")
@@ -74,10 +74,12 @@ class imu(threading.Thread):
                 self.accelx =  self.accel[0]
                 self.accely =  self.accel[1]
                 self.accelz =  self.accel[2]
-
-
+                
+                
                 print("roll = %f pitch = %f yaw = %f" % (self.roll,self.pitch,self.yaw))
-                time.sleep(self.poll_interval*1.0/1000.0)
+            #print("x = %f y = %f z = %f" %((self.accelx,self.accely,self.accelz)))
+            #f.close()
+                time.sleep(self.poll_interval*1.0/10.0)
 
     def stop(self): 
         self.running = False

@@ -51,7 +51,7 @@ from src.utils.Stop.DistanceDetector                        import Distance
 # =============================== CONFIG =================================================
 enableStream        =  True
 enableCameraSpoof   =  False 
-enableRc            =  False
+enableRc            =  True
 enableData          =  False
 # =============================== INITIALIZING PROCESSES =================================
 allProcesses = list()

@@ -90,9 +90,10 @@ class CameraThread(ThreadWithStop):
         # camera
         self.camera = PiCamera() #PiCamera
 
+
         # camera settings
         self.camera.resolution      =   (1640,1232)
-        self.camera.framerate       =   15
+        self.camera.framerate       =   25
 
         self.camera.brightness      =   55
         self.camera.shutter_speed   =   1200
