@@ -48,6 +48,14 @@ class WriteThread(Thread):
         self.serialCom  =  serialCom
         self.logFile    =  logFile
         self.messageConverter = MessageConverter()
+        
+        command = {'action': '1', 'speed': 0.0}
+        #print(command)
+        # Unpacking the dictionary into action and values
+        command_msg = self.messageConverter.get_command(**command)
+        #print("bilo stasas")
+        self.serialCom.write(command_msg.encode('ascii'))
+        self.logFile.write(command_msg)
 
     # ===================================== RUN ==========================================
     def run(self):
@@ -55,10 +63,10 @@ class WriteThread(Thread):
         """
         while True:
             command = self.inP.recv()
-            print(command)
+            #print(command)
             # Unpacking the dictionary into action and values
             command_msg = self.messageConverter.get_command(**command)
-            print(command_msg)
+            print("bilo stasas")
             self.serialCom.write(command_msg.encode('ascii'))
             self.logFile.write(command_msg)
 

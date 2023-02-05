@@ -101,7 +101,7 @@ class LineDetection(WorkerProcess):
 		print("\n LaneDet thread inited \n")
 		if self._blocker.is_set():
 			return 
-		StreamTh = Thread(name='LaneDetectionThread', target = self._send_thread, args= (self.inPs[0], ))
+		StreamTh = Thread(name='LaneDetectionThread', target = self._send_thread, args= (self.inPs[0], self.outPs))
 		StreamTh.daemon = True
 		self.threads.append(StreamTh)
 		
@@ -109,7 +109,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.112.83' # PC ip
+		self.serverIp   =  '192.168.0.100' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -129,7 +129,7 @@ class LineDetection(WorkerProcess):
 			pass
 
 		
-	def _send_thread(self, inP):
+	def _send_thread(self, inP, outPs):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
 		while True:
 			try:
@@ -157,8 +157,14 @@ class LineDetection(WorkerProcess):
 					#cv2.waitKey(1)
 					# taking wighted sum of original image and lane lines image
 					lanes = cv2.addWeighted(frame, 0.8, black_lines, 1, 1)
+					msg = {'action': '2', 'steerAngle': -22.0}
 				except:
 					lanes = frame
+					msg = {'action': '2', 'steerAngle': 22.0}
+				
+				for outP in outPs:
+					outP.send(msg)
+					print(msg)
 				#print("ne mogu da nacrtam")
 				#cv2.imshow('lane', lanes)
 				#cv2.waitKey(1)

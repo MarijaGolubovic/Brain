@@ -74,6 +74,7 @@ class SerialHandlerProcess(WorkerProcess):
         # read write thread        
         readTh  = ReadThread(self.serialCom,self.historyFile)
         self.threads.append(readTh)
+        print("pre write threada")
         writeTh = WriteThread(self.inPs[0], self.serialCom, self.historyFile)
         self.threads.append(writeTh)
         

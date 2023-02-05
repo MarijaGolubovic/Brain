@@ -47,11 +47,12 @@ from src.utils.camerastreamer.CameraStreamerProcess         import CameraStreame
 from src.utils.remotecontrol.RemoteControlReceiverProcess   import RemoteControlReceiverProcess
 from src.utils.linedetection.line                           import LineDetection
 
+from src.utils.IMU.IMUHandler                               import imu
 from src.utils.Stop.DistanceDetector                        import Distance 
 # =============================== CONFIG =================================================
 enableStream        =  True
 enableCameraSpoof   =  False 
-enableRc            =  True
+enableRc            =  False
 enableData          =  False
 # =============================== INITIALIZING PROCESSES =================================
 allProcesses = list()
@@ -60,7 +61,10 @@ allProcesses = list()
 if enableStream:
     camStR, camStS = Pipe(duplex = False)           # camera  ->  line
     camLineStR, camLineSts = Pipe(duplex = False)       # line    ->  streamer
+    rcShR, rcShS   = Pipe(duplex = False)
 
+    shProc = SerialHandlerProcess([rcShR], [])
+    allProcesses.append(shProc)
     if enableCameraSpoof:
         camSpoofer = CameraSpooferProcess([],[camStS],'vid')
         allProcesses.append(camSpoofer)
@@ -69,8 +73,10 @@ if enableStream:
         camProc = CameraProcess([],[camStS])
         allProcesses.append(camProc)
     
-    camLine = LineDetection([camStR],[])  
+    camLine = LineDetection([camStR],[rcShS])  
     allProcesses.append(camLine)
+    
+    
     #cv2.imshow(camLineStR.recv(), 'line')
     #camLine = CameralineFolow([camStR],[camSer])  salje komande na proces za serisuku komunikaciju
     #allProcess.append(camLine)
@@ -128,7 +134,8 @@ if enableRc:
     allProcesses.append(rcProc)
 
 # ==================================================
-
+#IMUproc = imu([],[])
+#allProcesses.append(IMUproc)
 # ===================================== START PROCESSES ==================================
 print("Starting the processes!",allProcesses)
 for proc in allProcesses:
