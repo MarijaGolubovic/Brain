@@ -30,6 +30,7 @@ from threading import Thread
 from src.hardware.serialhandler.messageconverter    import MessageConverter
 
 class WriteThread(Thread):
+    flag = 0;
     # ===================================== INIT =========================================
     def __init__(self, inP, serialCom, logFile):
         """The purpose of this thread is to redirectionate the received through input pipe to an other device by using serial communication. 
@@ -43,31 +44,55 @@ class WriteThread(Thread):
         logFile : FileHandler
             The log file handler to save the commands. 
         """
+        
         super(WriteThread,self).__init__()
+        self.flag = 0; 
         self.inP        =  inP
         self.serialCom  =  serialCom
         self.logFile    =  logFile
         self.messageConverter = MessageConverter()
         
-        command = {'action': '1', 'speed': 0.0}
-        #print(command)
-        # Unpacking the dictionary into action and values
+        command = {'action': '6', 'kp': 0.115, 'ki': 0.18, 'kd': 0.000222, 'tf': 0.04}
         command_msg = self.messageConverter.get_command(**command)
-        #print("bilo stasas")
         self.serialCom.write(command_msg.encode('ascii'))
         self.logFile.write(command_msg)
-
+        
+        command = {'action': '4', 'activate': True}
+        command_msg = self.messageConverter.get_command(**command)
+        self.serialCom.write(command_msg.encode('ascii'))
+        self.logFile.write(command_msg)
+        
+        command = {'action': '1', 'speed': 0.00}
+        command_msg = self.messageConverter.get_command(**command)
+        self.serialCom.write(command_msg.encode('ascii'))
+        self.logFile.write(command_msg)
+        
+        command = {'action': '2', 'steerAngle': 0.0}
+        command_msg = self.messageConverter.get_command(**command)
+        self.serialCom.write(command_msg.encode('ascii'))
+        self.logFile.write(command_msg)
+        
     # ===================================== RUN ==========================================
     def run(self):
         """ Represents the thread activity to redirectionate the message.
         """
-        while True:
-            command = self.inP.recv()
-            #print(command)
-            # Unpacking the dictionary into action and values
-            command_msg = self.messageConverter.get_command(**command)
-            print("bilo stasas")
-            self.serialCom.write(command_msg.encode('ascii'))
-            self.logFile.write(command_msg)
-
-
+        try:
+            while True:
+                command = self.inP.recv()
+                #print(command)
+                # Unpacking the dictionary into action and values
+                command_msg = self.messageConverter.get_command(**command)
+                self.serialCom.write(command_msg.encode('ascii'))
+                self.logFile.write(command_msg)
+                """
+                if flag == 1:
+                    command = {'action': '1', 'speed': 0.00}
+                    #print(command)
+                    # Unpacking the dictionary into action and values
+                    command_msg = self.messageConverter.get_command(**command)
+                    #print("bilo stasas")
+                    self.serialCom.write(command_msg.encode('ascii'))
+                    self.logFile.write(command_msg)
+                """
+        except:
+                print("Speed interupt")

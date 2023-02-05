@@ -9,6 +9,7 @@ from src.templates.workerprocess import WorkerProcess
 
 class imu(WorkerProcess):
     def __init__(self, inPs, outPs): 
+        
         #Thread.__init__(self)
         self.running = True
         
@@ -34,21 +35,25 @@ class imu(WorkerProcess):
 
         self.poll_interval = self.imu.IMUGetPollInterval()
         print("Recommended Poll Interval: %dmS\n" % self.poll_interval)
-        
         super(imu, self).__init__(inPs, outPs)
+        
     
     def _init_threads(self):
         if self._blocker.is_set():
             return
  
-        StreamTh = Thread(name='IMUDetectionThread', target = self._send_thread, args= ())
+        StreamTh = Thread(name='IMUDetectionThread', target = self._send_thread, args= (self.inPs[0], self.outPs))
         StreamTh.daemon = True
         self.threads.append(StreamTh)
         
+
+        
     def run(self):
         super(imu,self).run()
+            
+            
         
-    def _send_thread(self):
+    def _send_thread(self, inP, outPs):
         while self.running == True:
             if self.imu.IMURead():
                 self.data = self.imu.getIMUData()
@@ -61,11 +66,40 @@ class imu(WorkerProcess):
                 self.accely =  self.accel[1]
                 self.accelz =  self.accel[2]
                 
-                
+                command = self.inPs[0].recv()
+                while self.yaw > 355.0:
+                    print("--------yaw = %f" % (self.yaw))
+                    msg = {'action': '2', 'steerAngle': 10.0}
+                    for outP in self.outPs:
+                        outP.send(command)
+                    if self.imu.IMURead():
+                        self.data = self.imu.getIMUData()
+                        self.fusionPose = self.data["fusionPose"]
+                        self.yaw   =  math.degrees(self.fusionPose[2])
+                        time.sleep(self.poll_interval*1.0/10.0)
+                print(command)
+                pom = self.yaw
+                if (command == {'action': '2', 'steerAngle': 22.0}) :
+                    while self.yaw < pom + 90:
+                        msg = {'action': '2', 'steerAngle': 22.0}
+                        for outP in self.outPs:
+                            outP.send(msg)
+                        print("yaw = %f" % (self.yaw))
+                        if self.imu.IMURead():
+                            self.data = self.imu.getIMUData()
+                            self.fusionPose = self.data["fusionPose"]
+                            self.yaw   =  math.degrees(self.fusionPose[2])
+                            time.sleep(self.poll_interval*1.0/10.0)
+                    msg = {'action': '2', 'steerAngle': 0.0}
+                    for outP in self.outPs:
+                        outP.send(msg)
+                else :
+                    for outP in self.outPs:
+                        outP.send(command)
                 print("yaw = %f" % (self.yaw))
             #print("x = %f y = %f z = %f" %((self.accelx,self.accely,self.accelz)))
             #f.close()
-                time.sleep(self.poll_interval*1.0/10.0)
+                #time.sleep(self.poll_interval*1.0/10.0)
 
     def stop(self): 
         self.running = False

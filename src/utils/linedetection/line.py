@@ -8,7 +8,9 @@ import time
 from threading import Thread
 
 class LineDetection(WorkerProcess):
+	flag = 0
 	def __init__(self, inPs, outPs):
+		self.flag = 0
 		super(LineDetection, self).__init__(inPs, outPs)
 	
 	def run(self):
@@ -53,8 +55,10 @@ class LineDetection(WorkerProcess):
 			for line in lines:
 				#print('dl for ',line)
 				x1, y1, x2, y2 = line.reshape(4)
+				#x2, y2 = line.reshape(2)
 				#print('x2 y2 ', x2, y2)
 				cv2.line(lines_image, (x1, y1),(x2, y2), (255, 0, 0), 10)
+				#cv2.line(lines_image, (x2, y2), (255, 0, 0), 10)
 		#print("display lines")
 		return lines_image
 		
@@ -83,7 +87,7 @@ class LineDetection(WorkerProcess):
 			# create lines based on averages calculates
 			left_line = self.make_points(image, left_avg)
 			right_line = self.make_points(image, right_avg)
-			return np.array([left_line, right_line])
+			return np.array([right_line])
 		except:
 			print("no line")
 		
@@ -109,7 +113,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.0.100' # PC ip
+		self.serverIp   =  '192.168.112.83' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -147,7 +151,8 @@ class LineDetection(WorkerProcess):
 				edges = cv2.Canny(blur, 50, 150)
 				isolated = self.region(edges)
 				lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=40, maxLineGap=5)
-				#print(lines)
+				#print(lines(
+				
 				try:
 					#print("tryfff")
 					averaged_lines = self.average(frame, lines)
@@ -157,14 +162,24 @@ class LineDetection(WorkerProcess):
 					#cv2.waitKey(1)
 					# taking wighted sum of original image and lane lines image
 					lanes = cv2.addWeighted(frame, 0.8, black_lines, 1, 1)
-					msg = {'action': '2', 'steerAngle': -22.0}
+					msg = {'action': '2', 'steerAngle': 0.0}
+					for outP in  outPs:
+						outP.send(msg)
 				except:
 					lanes = frame
+					print("NO lANES")
+					#for i in range(0,10):
 					msg = {'action': '2', 'steerAngle': 22.0}
-				
+					for outP in outPs:
+						outP.send(msg)
+				"""
+				if self.flag == 1:
+					print("++++++++++++++++")
+					msg = {'action': '1', 'speed': 0.0}
 				for outP in outPs:
 					outP.send(msg)
 					print(msg)
+				"""
 				#print("ne mogu da nacrtam")
 				#cv2.imshow('lane', lanes)
 				#cv2.waitKey(1)
@@ -185,9 +200,9 @@ class LineDetection(WorkerProcess):
 					size   =  len(data)
 					self.connection.write(struct.pack("<L",size))
 					self.connection.write(data)
-					print("line send")
+					#print("line send")
 				except Exception as e:
-					print("CameraStreamer failed to stream images:",e,"\n")
+					#print("CameraStreamer failed to stream images:",e,"\n")
 					# Reinitialize the socket for reconnecting to client.  
 					self.connection = None
 					self._init_socket()
@@ -212,7 +227,7 @@ class LineDetection(WorkerProcess):
 				"""
 				
 			except Exception as e:
-				print("CameraStreamer failed to stream images:",e,"\n")
+				#print("CameraStreamer failed to stream images:",e,"\n")
 				# Reinitialize the socket for reconnecting to client.  
 				self.connection = None
 				#self._init_socket()
@@ -225,3 +240,13 @@ class LineDetection(WorkerProcess):
 				for outP in self.outPs:
 					outP.send([[stamps],frame])
 				"""
+	def stop(self):
+		print("stoppppppppp line")
+		msg = {'action': '1', 'speed': 0.0}
+		for outP in self.outPs:
+			outP.send(msg)
+			print(msg)
+#self.inPs[0] = msg
+#writeTh = WriteThread(self.inPs[0], self.serialCom, self.historyFile)
+#self.threads.append(writeTh) 
+		super(LineDetection,self).stop()  

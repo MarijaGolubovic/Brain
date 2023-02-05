@@ -36,6 +36,7 @@ from src.hardware.serialhandler.writethread import WriteThread
 
 class SerialHandlerProcess(WorkerProcess):
     # ===================================== INIT =========================================
+    flagSH = 0
     def __init__(self,inPs, outPs):
         """The functionality of this process is to redirectionate the commands from the RemoteControlReceiverProcess (or other process) to the 
         micro-controller via the serial port. The default frequency is 256000 and device file /dev/ttyACM0. It automatically save the sent 
@@ -49,6 +50,8 @@ class SerialHandlerProcess(WorkerProcess):
             Has no role.
         """
         super(SerialHandlerProcess,self).__init__(inPs, outPs)
+        
+        self.flagSH = 0
 
         devFile = '/dev/ttyACM0'
         logFile = 'historyFile.txt'
@@ -64,6 +67,7 @@ class SerialHandlerProcess(WorkerProcess):
     
     def run(self):
         super(SerialHandlerProcess,self).run()
+        
         #Post running process -> close the history file
         self.historyFile.close()
          
@@ -77,6 +81,14 @@ class SerialHandlerProcess(WorkerProcess):
         print("pre write threada")
         writeTh = WriteThread(self.inPs[0], self.serialCom, self.historyFile)
         self.threads.append(writeTh)
+
+    def stop(self):
+        print("stoppppppppp")
+        #msg = {'action': '1', 'speed': 0.0}
+        #self.inPs[0] = msg
+        writeTh = WriteThread(self.inPs[0], self.serialCom, self.historyFile)
+        self.threads.append(writeTh) 
+        super(SerialHandlerProcess,self).stop()   
         
     
 

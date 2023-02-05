@@ -49,6 +49,7 @@ from src.utils.linedetection.line                           import LineDetection
 
 from src.utils.IMU.IMUHandler                               import imu
 from src.utils.Stop.DistanceDetector                        import Distance 
+
 # =============================== CONFIG =================================================
 enableStream        =  True
 enableCameraSpoof   =  False 
@@ -57,11 +58,13 @@ enableData          =  False
 # =============================== INITIALIZING PROCESSES =================================
 allProcesses = list()
 # rcSer, camSer = Pipe(duplex = false)      camera salje komande autu
+
 # =============================== HARDWARE ===============================================
 if enableStream:
     camStR, camStS = Pipe(duplex = False)           # camera  ->  line
-    camLineStR, camLineSts = Pipe(duplex = False)       # line    ->  streamer
     rcShR, rcShS   = Pipe(duplex = False)
+    camLineShR, camLineShS = Pipe(duplex = False)       # line    ->  streamer
+
 
     shProc = SerialHandlerProcess([rcShR], [])
     allProcesses.append(shProc)
@@ -73,7 +76,10 @@ if enableStream:
         camProc = CameraProcess([],[camStS])
         allProcesses.append(camProc)
     
-    camLine = LineDetection([camStR],[rcShS])  
+    IMUproc = imu([camLineShR],[rcShS])
+    allProcesses.append(IMUproc)
+    
+    camLine = LineDetection([camStR],[camLineShS])  
     allProcesses.append(camLine)
     
     
@@ -134,8 +140,7 @@ if enableRc:
     allProcesses.append(rcProc)
 
 # ==================================================
-#IMUproc = imu([],[])
-#allProcesses.append(IMUproc)
+
 # ===================================== START PROCESSES ==================================
 print("Starting the processes!",allProcesses)
 for proc in allProcesses:
@@ -151,6 +156,8 @@ try:
     blocker.wait()
 except KeyboardInterrupt:
     print("\nCatching a KeyboardInterruption exception! Shutdown all processes.\n")
+    camLine.flag = 1
+    print("*****************************")
     for proc in allProcesses:
         if hasattr(proc,'stop') and callable(getattr(proc,'stop')):
             print("Process with stop",proc)
