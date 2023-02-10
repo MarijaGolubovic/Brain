@@ -117,7 +117,7 @@ class CameraThread(ThreadWithStop):
         """Stream function that actually published the frames into the pipes. Certain 
         processing(reshape) is done to the image format. 
         """
-
+        br = 0
         while self._running:
             
             yield self._stream
@@ -132,7 +132,7 @@ class CameraThread(ThreadWithStop):
             # output image and time stamp
             # Note: The sending process can be blocked, when doesn't exist any consumer process and it reaches the limit size.
             for outP in self.outPs:
-                print("bilo sta \n")
+                #print("bilo sta \n")
                 outP.send([[stamp], data])
 
             
