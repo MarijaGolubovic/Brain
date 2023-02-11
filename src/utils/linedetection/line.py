@@ -145,6 +145,7 @@ class LineDetection(WorkerProcess):
 							outP.send(msg)
 							flag = 0
 					except:
+						#Razmisliti kako uraditi ovo
 						lanes = frame
 						print("NO lANES")
 						msg = {'action': '2', 'steerAngle': 22.0}
