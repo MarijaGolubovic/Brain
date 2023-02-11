@@ -35,10 +35,11 @@ class LineDetection(WorkerProcess):
 		height, width = image.shape
 		mask = np.zeros_like(image)
 		h_min = int(height/2)
-		h_max = height-1
+		h_max = int(height*3/4)
+		w_min = int(width/2)
 		for i in range(h_min, h_max):
 			#print(i)
-			for j in range (0, width-1):
+			for j in range (w_min, width-1):
 				#print("j: ", j)
 				mask[i][j] = 255
 		isreg = cv2.bitwise_and(image, mask)
@@ -48,13 +49,15 @@ class LineDetection(WorkerProcess):
 		lines_image = np.zeros_like(image)
 		if lines is not None:
 			for line in lines:
-				x1, y1, x2, y2 = line.reshape(4)
-				cv2.line(lines_image, (x1, y1),(x2, y2), (255, 0, 0), 10)
+				if line is not None:
+					x1, y1, x2, y2 = line.reshape(4)
+					cv2.line(lines_image, (x1, y1),(x2, y2), (255, 0, 0), 10)
 		return lines_image
 		
 	def average(self, image, lines):
 		left = []
 		right = []
+		final_list = []
 		if lines is None:
 			return None
 		for line in lines:
@@ -66,22 +69,28 @@ class LineDetection(WorkerProcess):
 				left.append((slope, y_int))
 			else:
 				right.append((slope, y_int))
-		try:
+		if right != []:
 			right_avg = np.average(right, axis=0)
+			right_line = self.make_points(image, right_avg)
+			final_list.append(right_line)
+		if left != []:
 			left_avg = np.average(left, axis=0)
 			left_line = self.make_points(image, left_avg)
-			right_line = self.make_points(image, right_avg)
-			return np.array([right_line])
+			final_list.append(left_line)
+		try:
+			final_list = np.array(final_list)
 		except:
-			print("no line")
+			print("cannot convert")
+		return final_list
 		
 	def make_points(self, image, average):
 		slope, y_int = average
-		y1 = image.shape[0]
-		y2 = int(y1*(0.6))
-		x1 = int((y1 - y_int)//slope)
-		x2 = int((y2 - y_int)//slope)
-		return np.array(([x1, y1,  x2, y2]))
+		if abs(slope) > 0.65:
+			y1 = int(image.shape[0]*0.5)
+			y2 = int(image.shape[0]*0.75)
+			x1 = int((y1 - y_int)//slope)
+			x2 = int((y2 - y_int)//slope)
+			return np.array(([x1, y1,  x2, y2]))
 		
 	def _init_threads(self):
 		print("\n LaneDet thread inited \n")
@@ -121,7 +130,6 @@ class LineDetection(WorkerProcess):
 		while True:
 			try:
 				if flag == 1:
-					print("flag: ", flag)
 					stamps, frame = inP.recv()
 					grey = self.gray(frame)
 					blur = self.gauss(grey)
@@ -144,7 +152,6 @@ class LineDetection(WorkerProcess):
 							outP.send(msg)
 							flag = 0
 				else:
-					print("ne radi nista ", flag)
 					stamps, frame = inP.recv()
 					flag = 1
 				try:
