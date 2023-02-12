@@ -58,8 +58,9 @@ class LineDetection(WorkerProcess):
 		left = []
 		right = []
 		final_list = []
+		line_det = False
 		if lines is None:
-			return None
+			return final_list, line_det
 		for line in lines:
 			x1, y1, x2, y2 = line.reshape(4)
 			parameters = np.polyfit((x1, x2), (y1, y2), 1)
@@ -73,15 +74,17 @@ class LineDetection(WorkerProcess):
 			right_avg = np.average(right, axis=0)
 			right_line = self.make_points(image, right_avg)
 			final_list.append(right_line)
+			line_det = True
 		if left != []:
 			left_avg = np.average(left, axis=0)
 			left_line = self.make_points(image, left_avg)
 			final_list.append(left_line)
+			line_det = True
 		try:
 			final_list = np.array(final_list)
 		except:
 			print("cannot convert")
-		return final_list
+		return final_list, line_det
 		
 	def make_points(self, image, average):
 		slope, y_int = average
@@ -104,7 +107,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.100.83' # PC ip
+		self.serverIp   =  '192.168.100.187' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -136,16 +139,15 @@ class LineDetection(WorkerProcess):
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
 					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=40, maxLineGap=5)
-					try:
-						averaged_lines = self.average(frame, lines)
-						black_lines = self.display_lines(frame, averaged_lines)
-						lanes = cv2.addWeighted(frame, 0.8, black_lines, 1, 1)
+					averaged_lines, isDetected = self.average(frame, lines)
+					black_lines = self.display_lines(frame, averaged_lines)
+					lanes = cv2.addWeighted(frame, 0.8, black_lines, 1, 1)
+					if isDetected:
 						msg = {'action': '2', 'steerAngle': 0.0}
 						for outP in  outPs:
 							outP.send(msg)
 							flag = 0
-					except:
-						#Razmisliti kako uraditi ovo
+					else:
 						lanes = frame
 						print("NO lANES")
 						msg = {'action': '2', 'steerAngle': 22.0}

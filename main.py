@@ -76,10 +76,10 @@ if enableStream:
         camProc = CameraProcess([],[camStS])
         allProcesses.append(camProc)
     
-    IMUproc = imu([camLineShR],[rcShS])
-    allProcesses.append(IMUproc)
+    #IMUproc = imu([camLineShR],[rcShS])
+    #allProcesses.append(IMUproc)
     
-    camLine = LineDetection([camStR],[camLineShS])  
+    camLine = LineDetection([camStR],[rcShS])  
     allProcesses.append(camLine)
     
     
