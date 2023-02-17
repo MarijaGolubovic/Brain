@@ -46,9 +46,11 @@ from src.hardware.serialhandler.SerialHandlerProcess        import SerialHandler
 from src.utils.camerastreamer.CameraStreamerProcess         import CameraStreamerProcess
 from src.utils.remotecontrol.RemoteControlReceiverProcess   import RemoteControlReceiverProcess
 from src.utils.linedetection.line                           import LineDetection
+from src.utils.traficSignDetection.trafficSignDetection     import TraficSignDetection
 
 from src.utils.IMU.IMUHandler                               import imu
 from src.utils.Stop.DistanceDetector                        import Distance 
+
 
 # =============================== CONFIG =================================================
 enableStream        =  True
@@ -66,8 +68,8 @@ if enableStream:
     camLineShR, camLineShS = Pipe(duplex = False)       # line    ->  streamer
 
 
-    shProc = SerialHandlerProcess([rcShR], [])
-    allProcesses.append(shProc)
+    #shProc = SerialHandlerProcess([rcShR], [])
+    #allProcesses.append(shProc)
     if enableCameraSpoof:
         camSpoofer = CameraSpooferProcess([],[camStS],'vid')
         allProcesses.append(camSpoofer)
@@ -79,9 +81,11 @@ if enableStream:
     #IMUproc = imu([camLineShR],[rcShS])
     #allProcesses.append(IMUproc)
     
-    camLine = LineDetection([camStR],[rcShS])  
-    allProcesses.append(camLine)
+    #camLine = LineDetection([camStR],[rcShS])  
+    #allProcesses.append(camLine)
     
+    trafficSign = TraficSignDetection([camStR],[])
+    allProcesses.append(trafficSign)
     
     #cv2.imshow(camLineStR.recv(), 'line')
     #camLine = CameralineFolow([camStR],[camSer])  salje komande na proces za serisuku komunikaciju

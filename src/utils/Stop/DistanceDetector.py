@@ -36,9 +36,9 @@ class Distance(WorkerProcess):
 	def _init_mesure(self):
 		while True:
 			dis = self.distance()
-			time.sleep(1)
+			time.sleep(0.1)
 			print("Udaljenost je = %.1f cm" % dis)
-			if dis < 5:
+			if dis < 20:
 				command = {'action': '1', 'speed': 0.00}
 				for outP in self.outPs:
 					outP.send(command)
