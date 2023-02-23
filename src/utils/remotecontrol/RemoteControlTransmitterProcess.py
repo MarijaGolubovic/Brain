@@ -52,7 +52,7 @@ class RemoteControlTransmitterProcess(Thread):
         self.listener  =  KeyboardListenerThread([self.lisBrS])
 
         self.port      =  12244
-        self.serverIp  = '192.168.112.1'
+        self.serverIp  = '192.168.0.102'
 
         self.threads = list()
     # ===================================== RUN ==========================================

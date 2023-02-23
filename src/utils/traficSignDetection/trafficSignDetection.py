@@ -18,7 +18,7 @@ class TraficSignDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.0.101' # PC ip
+		self.serverIp   =  '192.168.0.102' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -78,10 +78,10 @@ class TraficSignDetection(WorkerProcess):
 		if 104 - tolerance < avg < tolerance + 104:
 			print("PRVENSTVO PROLAZA")
 			return True
-		elif 75 - tolerance < avg < tolerance + 75:
-			print("PJESACKI")
-			return True
-		elif 25 - tolerance < avg < tolerance + 25:
+		#elif 75 - tolerance < avg < tolerance + 75:
+		#	print("PJESACKI")
+		#	return True
+		elif 62 - tolerance < avg < tolerance + 62:
 			print("PARKING")
 			return True
 		elif 115 - tolerance < avg < tolerance + 115:
@@ -111,7 +111,8 @@ class TraficSignDetection(WorkerProcess):
 					#frame =  cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
 					blur = cv2.GaussianBlur(frame, (27, 27), 0)
 					#blur = self.increase_brightness(blur)
-					gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+					#gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+					gray = blur[:, :, 0]
 					gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 0)
 					#cv2.imshow("framerc",gray)
 					#cv2.waitKey(1)
@@ -135,17 +136,21 @@ class TraficSignDetection(WorkerProcess):
 						center, size, angle = cv2.minAreaRect(contour)  # pronadji pravougaonik minimalne povrsine koji ce obuhvatiti celu konturu
 						width, height = size
 						#x, y, height, width = cv2.boundingRect(contour)
-						if width > 30 and width < 90 and height > 30 and height < 90 and abs(height-width)<15:  # uslov da kontura pripada znaku
+						if width > 35 and width < 90 and height > 30 and height < 90 and abs(height-width) < 20:  # uslov da kontura pripada znaku
 							detected_frame = gray
 							center_height = round(center[0])
 							center_width = round(center[1])
-							new_width = round(width/2) - 5
-							new_height = round(height/2) - 5
+							new_width = round(width/2)
+							new_height = round(height/2)
 							detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
 							#cv2.imshow("framerc",detected_frame)
 							#cv2.waitKey(1)
 
 							detected_frame = self.increase_brightness(detected_frame)
+							t = time.time
+							#t = time.strftime(t)
+							#local = '/home/schobot/test_image/img' + t + '.jpg'
+							#cv2.imwrite(local, detected_frame)
 							#cv2.imshow("framerc",detected_frame)
 							#cv2.waitKey(1)
 							#avg = self.calculate_average_color(detected_frame)
