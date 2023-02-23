@@ -47,7 +47,7 @@ class TraficSignDetection(WorkerProcess):
 		self.threads.append(StreamTh)
 		
 	def increase_brightness(self, img, value = 30):
-		hsv = cv2.cvtColor(img,cv2.COLOR_RGB2HSV)
+		hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 		h, s, v = cv2.split(hsv)
 		
 		lim = 255 - value
@@ -71,125 +71,62 @@ class TraficSignDetection(WorkerProcess):
 		
 		h, s, v = cv2.split(hsv)
 		avg = np.average(h)
-		print("**************************************")
-		tolerence = 5
-		print("AVG = ", avg)
+		#print("**************************************")
+		tolerance = 3
+		print("AVG: ", avg)
 		
-		if 40 - tolerence < avg < 40 + tolerence:
-			print("PRVENSTVO PROLAZE")
+		if 104 - tolerance < avg < tolerance + 104:
+			print("PRVENSTVO PROLAZA")
 			return True
-		elif 109 - tolerence < avg < 109 + tolerence:
-			print("PESACKI")
+		elif 75 - tolerance < avg < tolerance + 75:
+			print("PJESACKI")
+			return True
+		elif 25 - tolerance < avg < tolerance + 25:
+			print("PARKING")
+			return True
+		elif 115 - tolerance < avg < tolerance + 115:
+			print("STOP")
 			return True
 		else:
 			print("======")
 			return False
-		"""red = avg_color[0]
-		green = avg_color[1]
-		blue = avg_color[2]
 
-		red_procentage_pp = False
-		green_procentage_pp = False
-		blue_procentage_pp = False
 
-		tolerance = 10
-		# Prvenstvo prolaza [149.5625  92.61    40.0075] 
-		if 149 - tolerance < red < 149+ tolerance:
-			red_procentage_pp = True
-		if 92 - tolerance < green < 92 + tolerance:
-			green_procentage_pp = True
-		if 40 - tolerance < blue < 40 + tolerance:
-			blue_procentage_pp = True
-
-		red_procentage_stop = False
-		green_procentage_stop = False
-		blue_procentage_stop = False
-
-		# STOP  [133.9775  48.96    59.02  ]
-		if 129 - tolerance < red < 129 + tolerance:
-			red_procentage_stop = True
-		if 45 - tolerance < green < 45 + tolerance:
-			green_procentage_stop = True
-		if 55 - tolerance < blue < 55 + tolerance:
-			blue_procentage_stop = True
-
-		red_procentage_pjesacki = False
-		green_procentage_pjesacki = False
-		blue_procentage_pjesacki = False
-
-		# Pjesacki  [106.3125  90.6375  96.9 ]
-		if 107 - tolerance < red < 107 + tolerance:
-			red_procentage_pjesacki = True
-		if 90 - tolerance < green < 90 + tolerance:
-			green_procentage_pjesacki = True
-		if 96 - tolerance < blue < 96 + tolerance:
-			blue_procentage_pjesacki = True
-
-		red_procentage_parking = False
-		green_procentage_parking = False
-		blue_procentage_parking = False
-
-		#Parking [103.1175  95.4175 121.2925]
-		if 103 - tolerance < red <  103 + tolerance:
-			red_procentage_parking =  True
-		if 95 - tolerance < green < 95 + tolerance:
-			green_procentage_parking = True
-		if 121 - tolerance < blue < 121 + tolerance:
-			blue_procentage_parking = True
-
-		if red_procentage_pp and green_procentage_pp and blue_procentage_pp:
-			print("PRVENSTVO PROLAZA")
-			return  True
-		elif red_procentage_stop and green_procentage_stop and blue_procentage_stop:
-			print("STOP")
-			return  True
-		elif red_procentage_pjesacki and green_procentage_pjesacki and blue_procentage_pjesacki:
-			print("PJESACKI")
-			return  True
-		elif red_procentage_parking and green_procentage_parking and blue_procentage_parking:
-			print("PARKING")
-			return True
-		else:
-			print("============")
-			return False
-		"""
-		
-
-			
 	def _send_thread(self, inP, outPs):
 		is_sign_clasified = False
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
 		while True:
 			try:
-				print("++++++++++++")
+				#print("++++++++++++")
 				stamps, frame = inP.recv()
 				frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 				#cv2.imshow("framerc", frame)
 				#cv2.waitKey(1)
 				copy_frame = frame.copy()
 				copy_frame =  cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)	
-				
 				if  is_sign_clasified == False:
 					
 					height, width, _ = frame.shape
 					h, w, _ = frame.shape
-					frame =  cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
-					blur = cv2.GaussianBlur(frame, (15, 15), 0)
+					#frame =  cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+					blur = cv2.GaussianBlur(frame, (27, 27), 0)
+					#blur = self.increase_brightness(blur)
 					gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
-					gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 0)
+					gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 0)
 					#cv2.imshow("framerc",gray)
 					#cv2.waitKey(1)
 					
 					# add padding on image - crop image
-					height = round(height / 3)
-					width = round(width / 2)
+					height = round(height / 4) 
+					width = round(4 * width / 5)
 					for i in range(0, h):
 						for j in range(0, w):
 							if i > height or j < width:
-								gray[i][j] = 255
-
-					#gray = cv2.bitwise_not(gray)
+								gray[i][j] = 1
 					
+					#gray_white = gray
+					gray = cv2.bitwise_not(gray)
+					#gray = cv2.bitwise_and(gray_white, gray_black)
 					contours, hierarchy = cv2.findContours(gray, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 					# cv2.drawContours(copy_frame, contours, -1, (255, 0, 0), 1)
 					
@@ -197,22 +134,23 @@ class TraficSignDetection(WorkerProcess):
 					for contour in contours:  # za svaku konturu
 						center, size, angle = cv2.minAreaRect(contour)  # pronadji pravougaonik minimalne povrsine koji ce obuhvatiti celu konturu
 						width, height = size
-						if width > 20 and width < 90 and height > 20 and height < 90:  # uslov da kontura pripada bar-kodu
+						#x, y, height, width = cv2.boundingRect(contour)
+						if width > 30 and width < 90 and height > 30 and height < 90 and abs(height-width)<15:  # uslov da kontura pripada znaku
 							detected_frame = gray
 							center_height = round(center[0])
 							center_width = round(center[1])
-							detected_frame = copy_frame[center_width - 20:center_width + 20, center_height - 20:center_height + 20]
+							new_width = round(width/2) - 5
+							new_height = round(height/2) - 5
+							detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
 							#cv2.imshow("framerc",detected_frame)
 							#cv2.waitKey(1)
 
 							detected_frame = self.increase_brightness(detected_frame)
 							#cv2.imshow("framerc",detected_frame)
 							#cv2.waitKey(1)
-
 							#avg = self.calculate_average_color(detected_frame)
 							#print(avg)
 							is_sign_clasified = self.clasificate_img(detected_frame)
-							
 							if is_sign_clasified:
 								is_sign_clasified = False
 							else:
@@ -220,7 +158,7 @@ class TraficSignDetection(WorkerProcess):
 
 							contours_founded.append(contour)  # ova kontura pripada
 							break
-						
+													
 					cv2.drawContours(copy_frame, contours_founded, -1, (255, 0, 0), 1)
 					
 				else:

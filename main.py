@@ -55,7 +55,7 @@ from src.utils.Stop.DistanceDetector                        import Distance
 # =============================== CONFIG =================================================
 enableStream        =  True
 enableCameraSpoof   =  False 
-enableRc            =  False
+enableRc            =  True
 enableData          =  False
 # =============================== INITIALIZING PROCESSES =================================
 allProcesses = list()
@@ -64,7 +64,7 @@ allProcesses = list()
 # =============================== HARDWARE ===============================================
 if enableStream:
     camStR, camStS = Pipe(duplex = False)           # camera  ->  line
-    rcShR, rcShS   = Pipe(duplex = False)
+    #rcShR, rcShS   = Pipe(duplex = False)
     camLineShR, camLineShS = Pipe(duplex = False)       # line    ->  streamer
 
 
