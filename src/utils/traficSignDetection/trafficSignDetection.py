@@ -71,7 +71,6 @@ class TraficSignDetection(WorkerProcess):
 		
 		h, s, v = cv2.split(hsv)
 		avg = np.average(h)
-		#print("**************************************")
 		tolerance = 3
 		print("AVG: ", avg)
 		
@@ -97,11 +96,8 @@ class TraficSignDetection(WorkerProcess):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
 		while True:
 			try:
-				#print("++++++++++++")
 				stamps, frame = inP.recv()
 				frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-				#cv2.imshow("framerc", frame)
-				#cv2.waitKey(1)
 				copy_frame = frame.copy()
 				copy_frame =  cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)	
 				if  is_sign_clasified == False:
@@ -110,12 +106,10 @@ class TraficSignDetection(WorkerProcess):
 					h, w, _ = frame.shape
 					#frame =  cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
 					blur = cv2.GaussianBlur(frame, (27, 27), 0)
-					#blur = self.increase_brightness(blur)
 					#gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 					gray = blur[:, :, 0]
 					gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 0)
-					#cv2.imshow("framerc",gray)
-					#cv2.waitKey(1)
+
 					
 					# add padding on image - crop image
 					height = round(height / 4) 
@@ -125,11 +119,9 @@ class TraficSignDetection(WorkerProcess):
 							if i > height or j < width:
 								gray[i][j] = 1
 					
-					#gray_white = gray
 					gray = cv2.bitwise_not(gray)
-					#gray = cv2.bitwise_and(gray_white, gray_black)
 					contours, hierarchy = cv2.findContours(gray, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-					# cv2.drawContours(copy_frame, contours, -1, (255, 0, 0), 1)
+
 					
 					contours_founded = []
 					for contour in contours:  # za svaku konturu
@@ -143,18 +135,10 @@ class TraficSignDetection(WorkerProcess):
 							new_width = round(width/2)
 							new_height = round(height/2)
 							detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
-							#cv2.imshow("framerc",detected_frame)
-							#cv2.waitKey(1)
+
 
 							detected_frame = self.increase_brightness(detected_frame)
-							t = time.time
-							#t = time.strftime(t)
-							#local = '/home/schobot/test_image/img' + t + '.jpg'
-							#cv2.imwrite(local, detected_frame)
-							#cv2.imshow("framerc",detected_frame)
-							#cv2.waitKey(1)
-							#avg = self.calculate_average_color(detected_frame)
-							#print(avg)
+
 							is_sign_clasified = self.clasificate_img(detected_frame)
 							if is_sign_clasified:
 								is_sign_clasified = False

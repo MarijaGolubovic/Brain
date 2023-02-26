@@ -88,12 +88,48 @@ class LineDetection(WorkerProcess):
 		
 	def make_points(self, image, average):
 		slope, y_int = average
-		if abs(slope) > 0.65:
+		if abs(slope) > 0.5:
 			y1 = int(image.shape[0]*0.5)
 			y2 = int(image.shape[0]*0.75)
 			x1 = int((y1 - y_int)//slope)
 			x2 = int((y2 - y_int)//slope)
 			return np.array(([x1, y1,  x2, y2]))
+			
+	def increase_brightness(self, img, value = 30):
+		hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+		h, s, v = cv2.split(hsv)
+		
+		lim = 255 - value
+		v[v > lim] = 255
+		v[v <= lim] += value
+		
+		final_hsv = cv2.merge((h, s, v))
+		img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2RGB)
+		return img
+		
+	def clasificate_img(self, avg_color):
+		hsv = cv2.cvtColor(avg_color, cv2.COLOR_BGR2HSV)
+		
+		h, s, v = cv2.split(hsv)
+		avg = np.average(h)
+		tolerance = 3
+		print("AVG: ", avg)
+		
+		if 104 - tolerance < avg < tolerance + 104:
+			print("PRVENSTVO PROLAZA")
+			return True
+		#elif 75 - tolerance < avg < tolerance + 75:
+		#	print("PJESACKI")
+		#	return True
+		elif 62 - tolerance < avg < tolerance + 62:
+			print("PARKING")
+			return True
+		elif 115 - tolerance < avg < tolerance + 115:
+			print("STOP")
+			return True
+		else:
+			print("======")
+			return False
 		
 	def _init_threads(self):
 		print("\n LaneDet thread inited \n")
@@ -107,7 +143,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.191.187' # PC ip
+		self.serverIp   =  '192.168.100.149' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -130,25 +166,76 @@ class LineDetection(WorkerProcess):
 	def _send_thread(self, inP, outPs):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
 		flag = 1
+		is_sign_clasified = False
 		while True:
 			try:
 				if flag == 1:
 					stamps, frame = inP.recv()
+					copy_frame = frame.copy()
+					#copy_frame =  cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)	
+					height_signs, width_signs, _ = frame.shape
+					h, w, _ = frame.shape
 					grey = self.gray(frame)
 					blur = self.gauss(grey)
+					
+					try:
+						if  is_sign_clasified == False:
+							blur_signs = cv2.GaussianBlur(frame, (27, 27), 0)
+							gray_signs = blur_signs[:, :, 0]
+							gray_signs = cv2.adaptiveThreshold(gray_signs, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 0)
+							height_signs = round(height_signs / 4) 
+							width_signs = round(4 * width_signs / 5) - 20
+							
+							for i in range(0, h):
+								for j in range(0, w):
+									if i > height_signs or j < width_signs:
+										gray_signs[i][j] = 1
+							
+							gray_signs = cv2.bitwise_not(gray_signs)
+							contours, hierarchy = cv2.findContours(gray_signs, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+							contours_founded = []
+							for contour in contours:  # za svaku konturu
+								center, sizeS, angle = cv2.minAreaRect(contour)  # pronadji pravougaonik minimalne povrsine koji ce obuhvatiti celu konturu
+								width_signs, height_signs = sizeS
+								if width_signs > 35 and width_signs < 90 and height_signs > 30 and height_signs < 90 and abs(height_signs-width_signs) < 20:  # uslov da kontura pripada znaku
+									detected_frame = gray_signs
+									center_height = round(center[0])
+									center_width = round(center[1])
+									new_width = round(width_signs/2)
+									new_height = round(height_signs/2)
+									detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
+
+
+									detected_frame = self.increase_brightness(detected_frame)
+
+									is_sign_clasified = self.clasificate_img(detected_frame)
+									if is_sign_clasified:
+										is_sign_clasified = False
+									else:
+										is_sign_clasified = True
+
+									contours_founded.append(contour)  # ova kontura pripada
+									break
+															
+							cv2.drawContours(copy_frame, contours_founded, -1, (255, 0, 0), 1)
+						else:
+							is_sign_clasified = False
+					except:
+						print("NO SIGN")
+					
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
 					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=40, maxLineGap=5)
-					averaged_lines, isDetected = self.average(frame, lines)
-					black_lines = self.display_lines(frame, averaged_lines)
-					lanes = cv2.addWeighted(frame, 0.8, black_lines, 1, 1)
-					if isDetected:
+					averaged_lines, isDetected = self.average(copy_frame, lines)
+					black_lines = self.display_lines(copy_frame, averaged_lines)
+					lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
+					if isDetected: #and averaged_lines != None:
 						msg = {'action': '2', 'steerAngle': 0.0}
 						for outP in  outPs:
 							outP.send(msg)
 							flag = 0
 					else:
-						lanes = frame
+						lanes = copy_frame
 						print("NO lANES")
 						msg = {'action': '2', 'steerAngle': 22.0}
 						for outP in outPs:
