@@ -59,6 +59,7 @@ class LineDetection(WorkerProcess):
 		right = []
 		final_list = []
 		line_det = False
+		#right_line = np.array(([0, 0,  0, 0]))
 		if lines is None:
 			return final_list, line_det
 		for line in lines:
@@ -72,14 +73,20 @@ class LineDetection(WorkerProcess):
 				right.append((slope, y_int))
 		if right != []:
 			right_avg = np.average(right, axis=0)
-			right_line = self.make_points(image, right_avg)
-			final_list.append(right_line)
-			line_det = True
+			slope, y_int = right_avg
+			#print("_______________", slope)
+			if abs(slope) > 0.5:
+				right_line = self.make_points(image, right_avg)
+				#print(right_line)
+				final_list.append(right_line)
+				line_det = True
 		if left != []:
 			left_avg = np.average(left, axis=0)
-			left_line = self.make_points(image, left_avg)
-			final_list.append(left_line)
-			line_det = True
+			slope, y_int = left_avg
+			if abs(slope) > 0.5:
+				left_line = self.make_points(image, left_avg)
+				final_list.append(left_line)
+				line_det = True
 		try:
 			final_list = np.array(final_list)
 		except:
@@ -88,13 +95,14 @@ class LineDetection(WorkerProcess):
 		
 	def make_points(self, image, average):
 		slope, y_int = average
-		if abs(slope) > 0.5:
-			y1 = int(image.shape[0]*0.5)
-			y2 = int(image.shape[0]*0.75)
-			x1 = int((y1 - y_int)//slope)
-			x2 = int((y2 - y_int)//slope)
-			return np.array(([x1, y1,  x2, y2]))
-			
+		#if abs(slope) > 0.5:
+		y1 = int(image.shape[0]*0.5)
+		y2 = int(image.shape[0]*0.75)
+		x1 = int((y1 - y_int)//slope)
+		x2 = int((y2 - y_int)//slope)
+		return np.array(([x1, y1,  x2, y2]))
+		#else:
+			#return np.array(([0, 0,  0, 0]))	
 	def increase_brightness(self, img, value = 30):
 		hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 		h, s, v = cv2.split(hsv)
