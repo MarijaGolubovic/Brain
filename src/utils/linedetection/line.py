@@ -120,19 +120,19 @@ class LineDetection(WorkerProcess):
 		
 		h, s, v = cv2.split(hsv)
 		avg = np.average(h)
-		tolerance = 3
+		tolerance = 5
 		print("AVG: ", avg)
 		
-		if 104 - tolerance < avg < tolerance + 104:
+		if 125 - tolerance < avg < tolerance + 125:
 			print("PRVENSTVO PROLAZA")
 			return True
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
-		elif 62 - tolerance < avg < tolerance + 62:
+		elif 78 - tolerance < avg < tolerance + 78:
 			print("PARKING")
 			return True
-		elif 115 - tolerance < avg < tolerance + 115:
+		elif 136 - tolerance < avg < tolerance + 136:
 			print("STOP")
 			return True
 		else:
@@ -188,8 +188,9 @@ class LineDetection(WorkerProcess):
 					
 					try:
 						if  is_sign_clasified == False:
-							blur_signs = cv2.GaussianBlur(frame, (27, 27), 0)
-							gray_signs = blur_signs[:, :, 0]
+							blur_signs = cv2.GaussianBlur(copy_frame, (27, 27), 0)
+							#gray_signs = blur_signs[:, :, 0]
+							gray_signs = cv2.cvtColor(blur_signs, cv2.COLOR_RGB2GRAY)
 							gray_signs = cv2.adaptiveThreshold(gray_signs, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 0)
 							height_signs = round(height_signs / 4) 
 							width_signs = round(4 * width_signs / 5) - 20
@@ -200,12 +201,12 @@ class LineDetection(WorkerProcess):
 										gray_signs[i][j] = 1
 							
 							gray_signs = cv2.bitwise_not(gray_signs)
-							contours, hierarchy = cv2.findContours(gray_signs, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+							contours, hierarchy = cv2.findContours(gray_signs, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 							contours_founded = []
 							for contour in contours:  # za svaku konturu
 								center, sizeS, angle = cv2.minAreaRect(contour)  # pronadji pravougaonik minimalne povrsine koji ce obuhvatiti celu konturu
 								width_signs, height_signs = sizeS
-								if width_signs > 35 and width_signs < 90 and height_signs > 30 and height_signs < 90 and abs(height_signs-width_signs) < 20:  # uslov da kontura pripada znaku
+								if width_signs > 25 and width_signs < 90 and height_signs > 35 and height_signs < 90 and abs(height_signs-width_signs) < 40:  # uslov da kontura pripada znaku
 									detected_frame = gray_signs
 									center_height = round(center[0])
 									center_width = round(center[1])
