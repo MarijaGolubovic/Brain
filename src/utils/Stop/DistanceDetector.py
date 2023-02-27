@@ -38,7 +38,7 @@ class Distance(WorkerProcess):
 		while True:
 			command = self.inPs[0].recv()
 			dis = self.distance()
-			time.sleep(0.1)
+			time.sleep(0.2)
 			#print("Udaljenost je = %.1f cm" % dis)
 			if dis < 20:
 				block = 1;

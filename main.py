@@ -67,7 +67,7 @@ if enableStream:
     camLineShR, camLineShS = Pipe(duplex = False)       # line    ->  streamer
 
 
-    shProc = SerialHandlerProcess([rcShR], [])
+    shProc = SerialHandlerProcess([hcShR], [])
     allProcesses.append(shProc)
     if enableCameraSpoof:
         camSpoofer = CameraSpooferProcess([],[camStS],'vid')
@@ -83,8 +83,8 @@ if enableStream:
     camLine = LineDetection([camStR],[rcShS])  
     allProcesses.append(camLine)
     
-    #test = Distance([rcShR],[hcShS])
-    #allProcesses.append(test)
+    test = Distance([rcShR],[hcShS])
+    allProcesses.append(test)
     
     #cv2.imshow(camLineStR.recv(), 'line')
     #camLine = CameralineFolow([camStR],[camSer])  salje komande na proces za serisuku komunikaciju
