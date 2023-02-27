@@ -34,8 +34,8 @@ class LineDetection(WorkerProcess):
 	def region(self, image):
 		height, width = image.shape
 		mask = np.zeros_like(image)
-		h_min = int(height/2)
-		h_max = int(height*3/4)
+		h_min = int(height/2) + 50
+		h_max = int(height*3/4) 
 		w_min = int(width/2)
 		for i in range(h_min, h_max):
 			#print(i)
@@ -59,10 +59,10 @@ class LineDetection(WorkerProcess):
 		right = []
 		final_list = []
 		line_det = False
-		isLeft = 0
+		direction = 0
 		#right_line = np.array(([0, 0,  0, 0]))
-		if lines is None:
-			return final_list, line_det, isLeft  #OVDE JE RETURN AKO PRAVI PROBLEM!!!!!
+		"""if lines is None:
+			return final_list, line_det, direction  #OVDE JE RETURN AKO PRAVI PROBLEM!!!!!"""
 		for line in lines:
 			x1, y1, x2, y2 = line.reshape(4)
 			parameters = np.polyfit((x1, x2), (y1, y2), 1)
@@ -72,6 +72,7 @@ class LineDetection(WorkerProcess):
 				left.append((slope, y_int))
 			else:
 				right.append((slope, y_int))
+		"""
 		if right != []:
 			right_avg = np.average(right, axis=0)
 			slope, y_int = right_avg
@@ -83,34 +84,46 @@ class LineDetection(WorkerProcess):
 				line_det = True
 			else:
 				print("U RASKRSNICI ", slope)
+		"""
 		if left != []:
 			left_avg = np.average(left, axis=0)
 			slope, y_int = left_avg
-			#if abs(slope) > 0.3:
-			isLeft = 2
-			left_line , isLeft= self.make_points(image, left_avg)
+			direction = 2
+			left_line = self.make_points(image, left_avg)
 			final_list.append(left_line)
 			line_det = True
+		elif right != []:
+			right_avg = np.average(right, axis=0)
+			slope, y_int = right_avg
+			if abs(slope) > 0.5:
+				right_line = self.make_points(image, right_avg)
+				if (right_line[0] < int(image.shape[1]*4/5) and right_line[2] < int(image.shape[1]*4/5)) or 0.5 < slope < 0.85:
+					direction = 1
+				#print(right_line)
+				final_list.append(right_line)
+				line_det = True
+			else:
+				print("U RASKRSNICI ", slope)
 		try:
 			final_list = np.array(final_list)
 		except:
 			print("cannot convert")
-		return final_list, line_det, isLeft
+		return final_list, line_det, direction
 		
 	def make_points(self, image, average):
 		slope, y_int = average
 		print(slope)
-		isLeft = 0
+		#isLeft = 0
 		#if abs(slope) > 0.5:
 		y1 = int(image.shape[0]*0.5)
 		y2 = int(image.shape[0]*0.75)
 		x1 = int((y1 - y_int)//slope)
 		x2 = int((y2 - y_int)//slope)
-		if (x1 < int(image.shape[1]*4/5) and x2 < int(image.shape[1]*4/5)) or 0 < slope < 0.85:
+		"""if (x1 < int(image.shape[1]*4/5) and x2 < int(image.shape[1]*4/5)) or 0 < slope < 0.85:
 			isLeft = 1
 		elif slope < -0.5:
-			isLeft = 2
-		return np.array(([x1, y1,  x2, y2])), isLeft
+			isLeft = 2"""
+		return np.array(([x1, y1,  x2, y2]))
 		#else:
 			#return np.array(([0, 0,  0, 0]))	
 	def increase_brightness(self, img, value = 30):
@@ -245,32 +258,33 @@ class LineDetection(WorkerProcess):
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
 					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=40, maxLineGap=5)
-					averaged_lines, isDetected, isLeft = self.average(copy_frame, lines)					
-					print(isLeft)
-					black_lines = self.display_lines(copy_frame, averaged_lines)
-					lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
-					prev = -100
-					if isDetected: #and averaged_lines != None:
-					#	if isLeft == True:
-					#		msg = {'action': '2', 'steerAngle': -22.0}
-					#	else:
-						if isLeft == 1:
+					if lines is None:
+						isDetected = False
+					else:
+						averaged_lines, isDetected, direction = self.average(copy_frame, lines)					
+						#print(direction)
+						black_lines = self.display_lines(copy_frame, averaged_lines)
+						lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
+						prev = -100
+					if isDetected:
+						if direction == 1:
 							msg = {'action': '2', 'steerAngle': -22.0}
-						elif isLeft == 2:
-							msg = {'action': '2', 'steerAngle': 22.0}
+						elif direction == 2:
+							msg = {'action': '2', 'steerAngle': 0.0}
 						else:
 							msg = {'action': '2', 'steerAngle': 0.0}
-						prev = isLeft
+						prev = direction
 						for outP in  outPs:
 							outP.send(msg)
 							flag = 0
 					else:
 						lanes = copy_frame
 						print("NO lANES")
+						print(prev)
 						if prev == 2:
-							msg = {'action': '2', 'steerAngle': 22.0}
+							msg = {'action': '2', 'steerAngle': 22.0} #AKO JE SKRETAO LEVO I NE VIDI LINIJU, NASTAVI DA SKRECES LEVO DOK NE VIDIS LINIJU
 						elif prev == 1:
-							msg = {'action': '2', 'steerAngle': -22.0}
+							msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
 						for outP in outPs:
 							outP.send(msg)
 							flag = 0

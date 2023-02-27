@@ -34,15 +34,22 @@ class Distance(WorkerProcess):
 		super(Distance, self).run()
 		
 	def _init_mesure(self):
+		block = 0;
 		while True:
+			command = self.inPs[0].recv()
 			dis = self.distance()
 			time.sleep(0.1)
-			print("Udaljenost je = %.1f cm" % dis)
+			#print("Udaljenost je = %.1f cm" % dis)
 			if dis < 20:
+				block = 1;
 				command = {'action': '1', 'speed': 0.00}
-				for outP in self.outPs:
-					outP.send(command)
+				#for outP in self.outPs:
+					#outP.send(command)
 			else :
-				command = {'action': '1', 'speed': 0.20}
-				for outP in self.outPs:
-					outP.send(command)
+				if block == 1:
+					command = {'action': '1', 'speed': 0.08}
+				#for outP in self.outPs:
+					#outP.send(command)
+				block = 0;
+			for outP in self.outPs:
+				outP.send(command)
