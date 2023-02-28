@@ -201,6 +201,7 @@ class LineDetection(WorkerProcess):
 		isStop = False
 		sign = -1
 		time = 0
+		isRight = -1
 		while True:
 			try:
 				if flag == 1:
@@ -294,9 +295,13 @@ class LineDetection(WorkerProcess):
 							if direction == 1:
 								msg = {'action': '2', 'steerAngle': -22.0}
 							elif direction == 2:
-								msg = {'action': '2', 'steerAngle': 0.0}
+								if isRight == 1:
+									msg = {'action': '2', 'steerAngle': 22.0}
+								else:
+									msg = {'action': '2', 'steerAngle': 0.0}
 							else:
 								msg = {'action': '2', 'steerAngle': 0.0}
+								isRight = 0
 							prev = direction
 							for outP in  outPs:
 								outP.send(msg)
@@ -307,6 +312,7 @@ class LineDetection(WorkerProcess):
 							print(prev)
 							if prev == 2:
 								msg = {'action': '2', 'steerAngle': 20.0} #AKO JE SKRETAO LEVO I NE VIDI LINIJU, NASTAVI DA SKRECES LEVO DOK NE VIDIS LINIJU
+								isRight = 1
 							elif prev == 1:
 								msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
 							for outP in outPs:
