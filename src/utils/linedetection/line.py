@@ -148,19 +148,19 @@ class LineDetection(WorkerProcess):
 		
 		if 125 - tolerance < avg < tolerance + 125:
 			print("PRVENSTVO PROLAZA")
-			return True
+			return True, 0
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
 		elif 78 - tolerance < avg < tolerance + 78:
 			print("PARKING")
-			return True
+			return True, 1
 		elif 136 - tolerance < avg < tolerance + 136:
 			print("STOP")
-			return True
+			return True, 2
 		else:
 			print("======")
-			return False
+			return False, 3
 		
 	def _init_threads(self):
 		print("\n LaneDet thread inited \n")
@@ -174,7 +174,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.100.149' # PC ip
+		self.serverIp   =  '192.168.0.102' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -198,6 +198,9 @@ class LineDetection(WorkerProcess):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
 		flag = 1
 		is_sign_clasified = False
+		isStop = False
+		sign = -1
+		time = 0
 		while True:
 			try:
 				if flag == 1:
@@ -240,7 +243,7 @@ class LineDetection(WorkerProcess):
 
 									detected_frame = self.increase_brightness(detected_frame)
 
-									is_sign_clasified = self.clasificate_img(detected_frame)
+									is_sign_clasified, sign = self.clasificate_img(detected_frame)
 									if is_sign_clasified:
 										is_sign_clasified = False
 									else:
@@ -258,36 +261,57 @@ class LineDetection(WorkerProcess):
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
 					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=40, maxLineGap=5)
-					if lines is None:
-						isDetected = False
-					else:
-						averaged_lines, isDetected, direction = self.average(copy_frame, lines)					
-						#print(direction)
-						black_lines = self.display_lines(copy_frame, averaged_lines)
-						lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
-						prev = -100
-					if isDetected:
-						if direction == 1:
-							msg = {'action': '2', 'steerAngle': -22.0}
-						elif direction == 2:
-							msg = {'action': '2', 'steerAngle': 0.0}
+					print("Prije detekcije")
+					print("Sign: ", sign)
+					print(isStop)
+					if  sign == 2 and isStop == False:
+						time = time + 1
+						print("Time: ", time)
+						if time < 15:
+							print("U if-u")
+							msg = {'action': '1', 'speed': 0.0}
+							for outP in outPs:
+								print("salje")
+								outP.send(msg)
+								flag = 0
 						else:
-							msg = {'action': '2', 'steerAngle': 0.0}
-						prev = direction
-						for outP in  outPs:
-							outP.send(msg)
-							flag = 0
+							isStop = True
+							msg = {'action': '1', 'speed': 0.09}
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
 					else:
-						lanes = copy_frame
-						print("NO lANES")
-						print(prev)
-						if prev == 2:
-							msg = {'action': '2', 'steerAngle': 22.0} #AKO JE SKRETAO LEVO I NE VIDI LINIJU, NASTAVI DA SKRECES LEVO DOK NE VIDIS LINIJU
-						elif prev == 1:
-							msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
-						for outP in outPs:
-							outP.send(msg)
-							flag = 0
+
+						if lines is None:
+							isDetected = False
+						else:
+							averaged_lines, isDetected, direction = self.average(copy_frame, lines)					
+							#print(direction)
+							black_lines = self.display_lines(copy_frame, averaged_lines)
+							lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
+							prev = -100
+						if isDetected:
+							if direction == 1:
+								msg = {'action': '2', 'steerAngle': -22.0}
+							elif direction == 2:
+								msg = {'action': '2', 'steerAngle': 0.0}
+							else:
+								msg = {'action': '2', 'steerAngle': 0.0}
+							prev = direction
+							for outP in  outPs:
+								outP.send(msg)
+								flag = 0
+						else:
+							lanes = copy_frame
+							print("NO lANES")
+							print(prev)
+							if prev == 2:
+								msg = {'action': '2', 'steerAngle': 20.0} #AKO JE SKRETAO LEVO I NE VIDI LINIJU, NASTAVI DA SKRECES LEVO DOK NE VIDIS LINIJU
+							elif prev == 1:
+								msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
 				else:
 					stamps, frame = inP.recv()
 					flag = 1
