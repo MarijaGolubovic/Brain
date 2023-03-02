@@ -1,31 +1,37 @@
 from src.templates.workerprocess import WorkerProcess
-import RPi.GPIO as GPIO
+import pigpio 
 import time
 
 class Distance(WorkerProcess):
 	def __init__(self, inPs, outPs):
-		GPIO.setmode(GPIO.BCM)
-		self.GPIO_TRIGER  = 19
-		self.GPIO_ECHO  = 26
-		GPIO.setup(self.GPIO_TRIGER, GPIO.OUT)
-		GPIO.setup(self.GPIO_ECHO, GPIO.IN)
+		self.pi = pigpio.pi()
+		self.GPIO_TRIGER  = 13
+		self.GPIO_ECHO  = 16
+		self.pi.set_mode(self.GPIO_TRIGER, pigpio.OUTPUT)
+		self.pi.set_mode(self.GPIO_ECHO, pigpio.INPUT)
 		super(Distance, self).__init__(inPs, outPs)
 	
 	def distance(self):
-		GPIO.output(self.GPIO_TRIGER,True)
+		self.pi.write(self.GPIO_TRIGER,1)
 		time.sleep(0.00001)
-		GPIO.output(self.GPIO_TRIGER,False)
+		self.pi.write(self.GPIO_TRIGER,0)
 		StartTime = time.time()
 		StopTime = time.time()
-		while GPIO.input(self.GPIO_ECHO) == 0:
+		pom = 0
+		while self.pi.read(self.GPIO_ECHO) == 0:
 			StartTime = time.time()
-		
-		while GPIO.input(self.GPIO_ECHO) == 1:
+			pom = pom + 1
+			if pom == 25:
+				pom = 0
+				break
+				
+		while self.pi.read(self.GPIO_ECHO) == 1:
 			StopTime = time.time()
-		
 		TimeElapsed = StopTime - StartTime
 		
 		distance = TimeElapsed * 34300 / 2
+		if distance < 0:
+			distance  = 30
 		
 		return distance
 		
@@ -37,19 +43,28 @@ class Distance(WorkerProcess):
 		block = 0;
 		while True:
 			command = self.inPs[0].recv()
-			dis = self.distance()
-			time.sleep(0.2)
-			#print("Udaljenost je = %.1f cm" % dis)
-			if dis < 20:
-				block = 1;
-				command = {'action': '1', 'speed': 0.00}
-				#for outP in self.outPs:
-					#outP.send(command)
-			else :
-				if block == 1:
-					command = {'action': '1', 'speed': 0.08}
-				#for outP in self.outPs:
-					#outP.send(command)
-				block = 0;
-			for outP in self.outPs:
-				outP.send(command)
+			try:
+				
+				dis = self.distance()
+				time.sleep(0.2)
+				print("Udaljenost je = %.1f cm" % dis)
+				if dis < 20:
+					block = 1;
+					command = {'action': '1', 'speed': 0.00}
+					#for outP in self.outPs:
+						#outP.send(command)
+				else :
+					if block == 1:
+						command = {'action': '1', 'speed': 0.09}
+					#for outP in self.outPs:
+						#outP.send(command)
+					block = 0;
+				for outP in self.outPs:
+					outP.send(command)
+			except:
+				for outP in self.outPs:
+					outP.send(command)
+				block = 0
+				print("*****************")
+	def stop(self):
+		self.pi.stop()

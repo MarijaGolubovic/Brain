@@ -97,7 +97,9 @@ class LineDetection(WorkerProcess):
 			slope, y_int = right_avg
 			if abs(slope) > 0.5:
 				right_line = self.make_points(image, right_avg)
-				if (right_line[0] < int(image.shape[1]*4/5) and right_line[2] < int(image.shape[1]*4/5)) or 0.5 < slope < 0.85:
+				if (right_line[0] < int(image.shape[1]*4/5) and right_line[2] < int(image.shape[1]*4/5)):
+					direction = 4
+				if  0.5 < slope < 0.85:
 					direction = 1
 				#print(right_line)
 				final_list.append(right_line)
@@ -152,7 +154,7 @@ class LineDetection(WorkerProcess):
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
-		elif 78 - tolerance < avg < tolerance + 78:
+		elif 65 - tolerance < avg < tolerance + 65:
 			print("PARKING")
 			return True, 1
 		elif 136 - tolerance < avg < tolerance + 136:
@@ -202,6 +204,9 @@ class LineDetection(WorkerProcess):
 		sign = -1
 		time = 0
 		isRight = -1
+		prev = -100
+		pick_left_line = 0
+		ignore_left_line = False
 		while True:
 			try:
 				if flag == 1:
@@ -261,7 +266,7 @@ class LineDetection(WorkerProcess):
 					
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
-					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=40, maxLineGap=5)
+					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
 					print("Prije detekcije")
 					print("Sign: ", sign)
 					print(isStop)
@@ -290,19 +295,35 @@ class LineDetection(WorkerProcess):
 							#print(direction)
 							black_lines = self.display_lines(copy_frame, averaged_lines)
 							lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
-							prev = -100
 						if isDetected:
-							if direction == 1:
-								msg = {'action': '2', 'steerAngle': -22.0}
-							elif direction == 2:
-								if isRight == 1:
-									msg = {'action': '2', 'steerAngle': 22.0}
+							print("##############::", prev)
+							if prev == 4 and pick_left_line >= 2 and ignore_left_line == False:
+								msg = {'action': '2', 'steerAngle': 18.0}
+								prev = -100
+								pick_left_line = 0
+							else:
+								if direction == 1:
+									msg = {'action': '2', 'steerAngle': -22.0}
+									ignore_left_line =  True
+								elif direction == 2:
+									if isRight == 1:
+										msg = {'action': '2', 'steerAngle': 22.0}
+										ignore_left_line = False
+									else:
+										msg = {'action': '2', 'steerAngle': 0.0}
+								elif direction == 4:
+									print("+++++++++++++")
+									if pick_left_line < 2:
+										msg = {'action': '2', 'steerAngle': -22.0}
+										pick_left_line = pick_left_line + 1
+										print("???????", pick_left_line)
+										print(msg)
 								else:
 									msg = {'action': '2', 'steerAngle': 0.0}
-							else:
-								msg = {'action': '2', 'steerAngle': 0.0}
-								isRight = 0
-							prev = direction
+									ignore_left_line = False
+									print("AAAAAAAAAAAAAAAAAAAAA", direction)
+									isRight = 0
+								prev = direction
 							for outP in  outPs:
 								outP.send(msg)
 								flag = 0
