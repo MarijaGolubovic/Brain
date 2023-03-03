@@ -163,7 +163,29 @@ class LineDetection(WorkerProcess):
 		else:
 			print("======")
 			return False, 3
-		
+
+	def parking(self, outPs):
+		howLong = 0
+		while howLong < 1000:
+			msg = {'action': '1', 'speed': 0.09}
+			for outP in outPs:
+				outP.send(msg)
+			howLong = howLong + 1
+		while 1000 < howLong < 2000:
+			if howLong % 2 == 0:
+				msg = {'action': '1', 'speed': 0.09}
+				for outP in outPs:
+					outP.send(msg)
+				howLong = howLong + 1
+			else:
+				msg = {'action': '2', 'steerAngle': -22.0}
+				for outP in outPs:
+					outP.send(msg)
+				howLong = howLong + 1
+		msg = {'action': '1', 'speed': 0.00}
+		for outP in outPs:
+			outP.send(msg)
+
 	def _init_threads(self):
 		print("\n LaneDet thread inited \n")
 		if self._blocker.is_set():
@@ -176,7 +198,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.0.102' # PC ip
+		self.serverIp   =  '192.168.0.103' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -287,7 +309,6 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 					else:
-
 						if lines is None:
 							isDetected = False
 						else:
@@ -296,7 +317,6 @@ class LineDetection(WorkerProcess):
 							black_lines = self.display_lines(copy_frame, averaged_lines)
 							lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
 						if isDetected:
-							print("##############::", prev)
 							if prev == 4 and pick_left_line >= 2 and ignore_left_line == False:
 								msg = {'action': '2', 'steerAngle': 18.0}
 								prev = -100
@@ -312,16 +332,12 @@ class LineDetection(WorkerProcess):
 									else:
 										msg = {'action': '2', 'steerAngle': 0.0}
 								elif direction == 4:
-									print("+++++++++++++")
 									if pick_left_line < 2:
 										msg = {'action': '2', 'steerAngle': -22.0}
 										pick_left_line = pick_left_line + 1
-										print("???????", pick_left_line)
-										print(msg)
 								else:
 									msg = {'action': '2', 'steerAngle': 0.0}
 									ignore_left_line = False
-									print("AAAAAAAAAAAAAAAAAAAAA", direction)
 									isRight = 0
 								prev = direction
 							for outP in  outPs:

@@ -12,26 +12,25 @@ class Distance(WorkerProcess):
 		super(Distance, self).__init__(inPs, outPs)
 	
 	def distance(self):
+		distance = -1
 		self.pi.write(self.GPIO_TRIGER,1)
 		time.sleep(0.00001)
 		self.pi.write(self.GPIO_TRIGER,0)
-		StartTime = time.time()
-		StopTime = time.time()
+		StartTime = 0
+		StopTime = 0
 		pom = 0
 		while self.pi.read(self.GPIO_ECHO) == 0:
 			StartTime = time.time()
 			pom = pom + 1
-			if pom == 25:
+			if pom == 15:
 				pom = 0
 				break
-				
+			
 		while self.pi.read(self.GPIO_ECHO) == 1:
 			StopTime = time.time()
-		TimeElapsed = StopTime - StartTime
-		
-		distance = TimeElapsed * 34300 / 2
-		if distance < 0:
-			distance  = 30
+		if StartTime != 0 and StopTime != 0 :
+			TimeElapsed = StopTime - StartTime
+			distance = TimeElapsed * 34300 / 2
 		
 		return distance
 		
@@ -48,7 +47,7 @@ class Distance(WorkerProcess):
 				dis = self.distance()
 				time.sleep(0.2)
 				print("Udaljenost je = %.1f cm" % dis)
-				if dis < 20:
+				if dis < 20 and dis > 0:
 					block = 1;
 					command = {'action': '1', 'speed': 0.00}
 					#for outP in self.outPs:
