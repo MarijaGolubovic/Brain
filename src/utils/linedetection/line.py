@@ -154,7 +154,7 @@ class LineDetection(WorkerProcess):
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
-		elif 65 - tolerance < avg < tolerance + 65:
+		elif 5 - tolerance < avg < tolerance + 5:
 			print("PARKING")
 			return True, 1
 		elif 136 - tolerance < avg < tolerance + 136:
@@ -166,25 +166,36 @@ class LineDetection(WorkerProcess):
 
 	def parking(self, outPs):
 		howLong = 0
-		while howLong < 1000:
+		print("Prije 1. while")
+		start_time = time.time()
+		print("START_TIME: ", start_time)
+		print("END_TIME:", end_time)
+		end_time =  time.time()
+		while end_time - start_time < 1.0:
+			print("u 1. while")
+			end_time = time.time()
+			print("-------", end_time - start_time)
 			msg = {'action': '1', 'speed': 0.09}
 			for outP in outPs:
 				outP.send(msg)
-			howLong = howLong + 1
-		while 1000 < howLong < 2000:
+		"""
+		while 1000 <= howLong < 2000:
+			print("u 2. while")
 			if howLong % 2 == 0:
-				msg = {'action': '1', 'speed': 0.09}
+				msg = {'action': '1', 'speed': -0.09}
 				for outP in outPs:
 					outP.send(msg)
 				howLong = howLong + 1
 			else:
+				print("U else")
 				msg = {'action': '2', 'steerAngle': -22.0}
+				print("######", msg)
 				for outP in outPs:
 					outP.send(msg)
 				howLong = howLong + 1
 		msg = {'action': '1', 'speed': 0.00}
 		for outP in outPs:
-			outP.send(msg)
+			outP.send(msg)"""
 
 	def _init_threads(self):
 		print("\n LaneDet thread inited \n")
@@ -198,7 +209,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.0.103' # PC ip
+		self.serverIp   =  '192.168.39.149' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -226,6 +237,8 @@ class LineDetection(WorkerProcess):
 		sign = -1
 		time = 0
 		isRight = -1
+		inParking = -1
+		inParkingTime = 0
 		prev = -100
 		pick_left_line = 0
 		ignore_left_line = False
@@ -285,94 +298,168 @@ class LineDetection(WorkerProcess):
 							is_sign_clasified = False
 					except:
 						print("NO SIGN")
-					
+
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
 					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
 					print("Prije detekcije")
 					print("Sign: ", sign)
 					print(isStop)
-					if  sign == 2 and isStop == False:
-						time = time + 1
-						print("Time: ", time)
-						if time < 15:
-							print("U if-u")
+					print(inParking)
+					if inParking == 1:
+						print("__________________111111111111 ", inParkingTime)
+						if inParkingTime == 0:
+							msg = {'action': '2', 'steerAngle': 0.0}
+							for outP in outPs:
+								outP.send(msg)
+						if 0 < inParkingTime < 39:
+							print("__________________2222222222222")
+							msg = {'action': '1', 'speed': 0.09}
+							for outP in outPs:
+								outP.send(msg)
+								#flag = 0
+						if inParkingTime == 39:
 							msg = {'action': '1', 'speed': 0.0}
 							for outP in outPs:
-								print("salje")
 								outP.send(msg)
 								flag = 0
-						else:
-							isStop = True
+						if inParkingTime == 40:
+							print("__________________3333333333333333")
+							msg = {'action': '2', 'steerAngle': 22.0}
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
+						if 40 < inParkingTime < 54:
+							print("__________________444444444444")
+							msg = {'action': '1', 'speed': -0.09}
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
+						if inParkingTime == 54:
+							msg = {'action': '2', 'steerAngle': -22.0}
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
+						if 54 < inParkingTime < 66:
+							msg = {'action': '1', 'speed': -0.09}
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
+						if inParkingTime == 66:
+							msg = {'action': '1', 'speed': 0.0 }
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
+						if inParkingTime == 67:
+							msg = {'action': '2', 'steerAngle': 18.0}
+							for outP in outPs:
+								outP.send(msg)
+								flag = 0
+						if 67 < inParkingTime < 69:
 							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-					else:
-						if lines is None:
-							isDetected = False
-						else:
-							averaged_lines, isDetected, direction = self.average(copy_frame, lines)					
-							#print(direction)
-							black_lines = self.display_lines(copy_frame, averaged_lines)
-							lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
-						if isDetected:
-							if prev == 4 and pick_left_line >= 2 and ignore_left_line == False:
-								msg = {'action': '2', 'steerAngle': 18.0}
-								prev = -100
-								pick_left_line = 0
-							else:
-								if direction == 1:
-									msg = {'action': '2', 'steerAngle': -22.0}
-									ignore_left_line =  True
-								elif direction == 2:
-									if isRight == 1:
-										msg = {'action': '2', 'steerAngle': 22.0}
-										ignore_left_line = False
-									else:
-										msg = {'action': '2', 'steerAngle': 0.0}
-								elif direction == 4:
-									if pick_left_line < 2:
-										msg = {'action': '2', 'steerAngle': -22.0}
-										pick_left_line = pick_left_line + 1
-								else:
-									msg = {'action': '2', 'steerAngle': 0.0}
-									ignore_left_line = False
-									isRight = 0
-								prev = direction
-							for outP in  outPs:
-								outP.send(msg)
-								flag = 0
-						else:
-							lanes = copy_frame
-							print("NO lANES")
-							print(prev)
-							if prev == 2:
-								msg = {'action': '2', 'steerAngle': 20.0} #AKO JE SKRETAO LEVO I NE VIDI LINIJU, NASTAVI DA SKRECES LEVO DOK NE VIDIS LINIJU
-								isRight = 1
-							elif prev == 1:
-								msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
+						if inParkingTime == 69:
+							print("__________________55555555555")
+							inParkingTime = 0
+							inParking = 0
+							msg = {'action': '1', 'speed': 0.0}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
+						inParkingTime += 1
+					else:
+						if  sign == 2 and isStop == False:
+							time = time + 1
+							print("Time: ", time)
+							if time < 15:
+								print("U if-u")
+								msg = {'action': '1', 'speed': 0.0}
+								for outP in outPs:
+									print("salje")
+									outP.send(msg)
+									flag = 0
+							else:
+								isStop = True
+								msg = {'action': '1', 'speed': 0.09}
+								for outP in outPs:
+									outP.send(msg)
+									flag = 0
+						elif sign == 1:
+							inParking = 1
+							flag = 0
+						else:
+							if lines is None:
+								isDetected = False
+							else:
+								averaged_lines, isDetected, direction = self.average(copy_frame, lines)					
+								#print(direction)
+								black_lines = self.display_lines(copy_frame, averaged_lines)
+								lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
+							if isDetected:
+								if prev == 4 and pick_left_line >= 2 and ignore_left_line == False:
+									msg = {'action': '2', 'steerAngle': 18.0}
+									prev = -100
+									pick_left_line = 0
+								else:
+									if direction == 1:
+										msg = {'action': '2', 'steerAngle': -22.0}
+										ignore_left_line =  True
+									elif direction == 2:
+										if isRight == 1:
+											msg = {'action': '2', 'steerAngle': 22.0}
+											ignore_left_line = False
+										else:
+											msg = {'action': '2', 'steerAngle': 0.0}
+									elif direction == 4:
+										if pick_left_line < 2:
+											msg = {'action': '2', 'steerAngle': -22.0}
+											pick_left_line = pick_left_line + 1
+									else:
+										msg = {'action': '2', 'steerAngle': 0.0}
+										ignore_left_line = False
+										isRight = 0
+									prev = direction
+								for outP in  outPs:
+									outP.send(msg)
+									flag = 0
+							else:
+								lanes = copy_frame
+								print("NO lANES")
+								print(prev)
+								if prev == 2:
+									msg = {'action': '2', 'steerAngle': 20.0} #AKO JE SKRETAO LEVO I NE VIDI LINIJU, NASTAVI DA SKRECES LEVO DOK NE VIDIS LINIJU
+									isRight = 1
+								elif prev == 1:
+									msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
+								for outP in outPs:
+									outP.send(msg)
+									flag = 0
 				else:
 					stamps, frame = inP.recv()
+					#lanes = frame
 					flag = 1
 				try:
+					print("try posaljiiii")
 					result, image = cv2.imencode('.jpg', lanes, encode_param)
+					print("napravio imag")
 					data   =  image.tobytes()
 					size   =  len(data)
+					print("size")
 					self.connection.write(struct.pack("<L",size))
+					print("connection")
 					self.connection.write(data)
-					#print("line send")
+					print("line send")
 				except Exception as e:
+					print("except")
 					self.connection = None
 					self._init_socket()
-					pass
+					#pass
 			except Exception as e:
 				self.connection = None
-				#self._init_socket()
-				pass
+				self._init_socket()
+				#pass
 
 	def stop(self):
 		print("stoppppppppp line")

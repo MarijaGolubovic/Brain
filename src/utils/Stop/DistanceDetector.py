@@ -1,6 +1,7 @@
 from src.templates.workerprocess import WorkerProcess
 import pigpio 
 import time
+import numpy as np
 
 class Distance(WorkerProcess):
 	def __init__(self, inPs, outPs):
@@ -11,27 +12,39 @@ class Distance(WorkerProcess):
 		self.pi.set_mode(self.GPIO_ECHO, pigpio.INPUT)
 		super(Distance, self).__init__(inPs, outPs)
 	
-	def distance(self):
-		distance = -1
+	def distance(self, dist):
+		distance = 0
+		
 		self.pi.write(self.GPIO_TRIGER,1)
 		time.sleep(0.00001)
 		self.pi.write(self.GPIO_TRIGER,0)
-		StartTime = 0
-		StopTime = 0
+		
+		StartTime = time.time()
+		StopTime = time.time()
+		
 		pom = 0
 		while self.pi.read(self.GPIO_ECHO) == 0:
 			StartTime = time.time()
 			pom = pom + 1
-			if pom == 15:
+			if pom == 25:
 				pom = 0
 				break
 			
 		while self.pi.read(self.GPIO_ECHO) == 1:
 			StopTime = time.time()
-		if StartTime != 0 and StopTime != 0 :
-			TimeElapsed = StopTime - StartTime
-			distance = TimeElapsed * 34300 / 2
+			
+
+		TimeElapsed = StopTime - StartTime
+		distance = TimeElapsed * 34300 / 2
 		
+		if distance < 0 :
+			"""
+			myArr = np.nonzero(dist)
+			for k in myArr:
+				dista[k] = dist[k]
+			distance = np.average(dista)"""
+			distance = np.average(dist)
+			
 		return distance
 		
 	def run(self):
@@ -43,11 +56,14 @@ class Distance(WorkerProcess):
 		while True:
 			command = self.inPs[0].recv()
 			try:
-				
-				dis = self.distance()
+				dist = np.zeros(5)
+				for i in range (0, 4):
+					dist[i] = self.distance(dist)
+				dista = np.average(dist)
+				#dis = self.distance()
 				time.sleep(0.2)
 				print("Udaljenost je = %.1f cm" % dis)
-				if dis < 20 and dis > 0:
+				if dista < 20 :
 					block = 1;
 					command = {'action': '1', 'speed': 0.00}
 					#for outP in self.outPs:
