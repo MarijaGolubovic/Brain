@@ -56,23 +56,18 @@ class Distance(WorkerProcess):
 		while True:
 			command = self.inPs[0].recv()
 			try:
-				dist = np.zeros(5)
+				dist = np.zeros(4)
 				for i in range (0, 4):
 					dist[i] = self.distance(dist)
 				dista = np.average(dist)
-				#dis = self.distance()
 				time.sleep(0.2)
-				print("Udaljenost je = %.1f cm" % dis)
+				print("Udaljenost je = %.1f cm" % dista)
 				if dista < 20 :
 					block = 1;
 					command = {'action': '1', 'speed': 0.00}
-					#for outP in self.outPs:
-						#outP.send(command)
 				else :
 					if block == 1:
 						command = {'action': '1', 'speed': 0.09}
-					#for outP in self.outPs:
-						#outP.send(command)
 					block = 0;
 				for outP in self.outPs:
 					outP.send(command)

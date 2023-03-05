@@ -209,7 +209,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.39.149' # PC ip
+		self.serverIp   =  '192.168.169.149' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -441,16 +441,11 @@ class LineDetection(WorkerProcess):
 					#lanes = frame
 					flag = 1
 				try:
-					print("try posaljiiii")
 					result, image = cv2.imencode('.jpg', lanes, encode_param)
-					print("napravio imag")
 					data   =  image.tobytes()
 					size   =  len(data)
-					print("size")
 					self.connection.write(struct.pack("<L",size))
-					print("connection")
 					self.connection.write(data)
-					print("line send")
 				except Exception as e:
 					print("except")
 					self.connection = None
