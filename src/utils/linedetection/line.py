@@ -72,10 +72,11 @@ class LineDetection(WorkerProcess):
 		if left != []:
 			left_avg = np.average(left, axis=0)
 			slope, y_int = left_avg
-			direction = 2
-			left_line = self.make_points(image, left_avg)
-			final_list.append(left_line)
-			line_det = True
+			if abs(slope) > 0.02:
+				direction = 2
+				left_line = self.make_points(image, left_avg)
+				final_list.append(left_line)
+				line_det = True
 		elif right != []:
 			right_avg = np.average(right, axis=0)
 			slope, y_int = right_avg
@@ -139,7 +140,7 @@ class LineDetection(WorkerProcess):
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
-		elif 5 - tolerance < avg < tolerance + 5:
+		elif 75 - tolerance < avg < tolerance + 75:
 			print("PARKING")
 			return True, 1
 		elif 136 - tolerance < avg < tolerance + 136:
@@ -176,7 +177,7 @@ class LineDetection(WorkerProcess):
 		for contour in contours:
 			center, size, angle = cv2.minAreaRect(contour)
 			width, height = size
-			if width > 30 and width < 70 and height > 30 and height < 70 and abs(height - width)<10:
+			if width > 30 and width < 100 and height > 30 and height < 100 and abs(height - width)<10:
 				contour_list.append(contour)
 				position_y = round(center[0])
 				position_x = round(center[1])
@@ -188,7 +189,7 @@ class LineDetection(WorkerProcess):
 		
 				h, s, v = cv2.split(hsv)
 				avg = np.average(h)
-				#print("**********COLOR***********:", avg)
+				print("**********COLOR***********:", avg)
 				
 				#cv2.imshow("semafongr", detected_frame)
 				#cv2.waitKey(1)
@@ -200,6 +201,7 @@ class LineDetection(WorkerProcess):
 		tolerance = 10
 		if 60 - tolerance < avg < 60 + tolerance:
 			print("UPALJENO JE : zeleno")
+			flag = True
 		elif 170 - tolerance < avg < 170 + tolerance:
 			print("UPALJENO JE : crveno")
 			flag = False
@@ -250,13 +252,15 @@ class LineDetection(WorkerProcess):
 		inParking = -1
 		isTraficLight = True
 		inParkingTime = 0
+		isRedLight = False
 		prev = -100
 		pick_left_line = 0
 		ignore_left_line = False
+		msg = {'action': '1', 'speed': 0.09}
 		while True:
 			try:
 				if flag == 1:
-					msg = {'action': '1', 'speed': 0.09}
+					#msg = {"action": '1', 'speed': 0.09}
 					stamps, frame = inP.recv()
 					lanes = frame
 					copy_frame = frame.copy()
@@ -270,8 +274,17 @@ class LineDetection(WorkerProcess):
 					except:
 						isTraficLight = True
 						print("ITS OKAY")
+					if isTraficLight == True:
+						if isRedLight == True:
+							msg = {'action': '1', 'speed': 0.09}
+							for outP in outPs:
+								outP.send(msg)
+							isRedLight = False
 					if isTraficLight == False:
+						isRedLight = True
 						msg = {'action': '1', 'speed': 0.00}
+						for outP in outPs:
+							outP.send(msg)
 					else:
 						try:
 							if  is_sign_clasified == False:
@@ -411,9 +424,9 @@ class LineDetection(WorkerProcess):
 							else:
 								averaged_lines, isDetected, direction = self.average(copy_frame, lines)					
 								#print(direction)
+							if isDetected:
 								black_lines = self.display_lines(copy_frame, averaged_lines)
 								lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
-							if isDetected:
 								if prev == 4 and pick_left_line >= 2 and ignore_left_line == False:
 									msg = {'action': '2', 'steerAngle': 18.0}
 									prev = -100
@@ -464,7 +477,7 @@ class LineDetection(WorkerProcess):
 					self.connection.write(struct.pack("<L",size))
 					self.connection.write(data)
 				except Exception as e:
-					print("except")
+					print("except ", e)
 					self.connection = None
 					self._init_socket()
 					#pass
