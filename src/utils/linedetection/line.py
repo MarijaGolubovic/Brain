@@ -84,7 +84,7 @@ class LineDetection(WorkerProcess):
 				right_line = self.make_points(image, right_avg)
 				if (right_line[0] < int(image.shape[1]*4/5) and right_line[2] < int(image.shape[1]*4/5)):
 					direction = 4
-				if  0.5 < slope < 0.85:
+				if  0.4 < slope < 0.9:
 					direction = 1
 				#print(right_line)
 				final_list.append(right_line)
@@ -93,7 +93,7 @@ class LineDetection(WorkerProcess):
 				print("U RASKRSNICI ", slope)
 		try:
 			final_list = np.array(final_list)
-			print("((((((((((((((((((((((((((((((((((((", final_list)
+			#print("((((((((((((((((((((((((((((((((((((", final_list)
 		except:
 			print("cannot convert")
 		return final_list, line_det, direction
@@ -140,10 +140,10 @@ class LineDetection(WorkerProcess):
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
-		elif 75 - tolerance < avg < tolerance + 75:
+		elif 53 - tolerance < avg < tolerance + 53:
 			print("PARKING")
 			return True, 1
-		elif 136 - tolerance < avg < tolerance + 136:
+		elif 115 - tolerance < avg < tolerance + 115:
 			print("STOP")
 			return True, 2
 		else:
@@ -221,7 +221,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.39.149' # PC ip
+		self.serverIp   =  '192.168.30.149' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -245,14 +245,14 @@ class LineDetection(WorkerProcess):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
 		flag = 1
 		is_sign_clasified = False
-		isStop = False
+		isStop = True
 		sign = -1
 		time = 0
 		isRight = -1
 		inParking = -1
 		isTraficLight = True
 		inParkingTime = 0
-		isRedLight = False
+		isRedLight = True
 		prev = -100
 		pick_left_line = 0
 		ignore_left_line = False
@@ -370,17 +370,17 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if 54 < inParkingTime < 66:
+						if 54 < inParkingTime < 63:
 							msg = {'action': '1', 'speed': -0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 66:
+						if inParkingTime == 63:
 							msg = {'action': '1', 'speed': 0.0 }
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 67:
+						if inParkingTime == 64:
 							msg = {'action': '2', 'steerAngle': 18.0}
 							for outP in outPs:
 								outP.send(msg)
@@ -399,22 +399,37 @@ class LineDetection(WorkerProcess):
 								flag = 0
 						inParkingTime += 1
 					else:
-						if  sign == 2 and isStop == False:
+						if  sign == 2 :
+							isStop = False
+							print("************************")
+						if isStop == False:
 							time = time + 1
 							print("Time: ", time)
-							if time < 15:
+							if time < 10:
 								print("U if-u")
 								msg = {'action': '1', 'speed': 0.0}
 								for outP in outPs:
 									print("salje")
 									outP.send(msg)
 									flag = 0
-							else:
-								isStop = True
+							elif 10 <= time < 36: #raskrsnica
 								msg = {'action': '1', 'speed': 0.09}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
+							elif time == 36:
+								msg = {'action': '2', 'steerAngle': 8.0}
+								for outP in outPs:
+									outP.send(msg)
+									flag = 0
+							else:
+								isStop = True
+								sign = -1
+								msg = {'action': '1', 'speed': 0.09}
+								for outP in outPs:
+									outP.send(msg)
+									flag = 0
+							print("-----------------------------", isStop)
 						elif sign == 1:
 							inParking = 1
 							flag = 0
@@ -473,7 +488,7 @@ class LineDetection(WorkerProcess):
 					result, image = cv2.imencode('.jpg', lanes, encode_param)
 					data   =  image.tobytes()
 					size   =  len(data)
-					print("))))))))))))))))))))", size)
+					#print("))))))))))))))))))))", size)
 					self.connection.write(struct.pack("<L",size))
 					self.connection.write(data)
 				except Exception as e:
