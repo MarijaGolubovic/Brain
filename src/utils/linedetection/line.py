@@ -140,7 +140,7 @@ class LineDetection(WorkerProcess):
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
-		elif 53 - tolerance < avg < tolerance + 53:
+		elif 78 - tolerance < avg < tolerance + 78:
 			print("PARKING")
 			return True, 1
 		elif 115 - tolerance < avg < tolerance + 115:
@@ -256,6 +256,8 @@ class LineDetection(WorkerProcess):
 		prev = -100
 		pick_left_line = 0
 		ignore_left_line = False
+		is_priority = False
+		time_p = 0
 		msg = {'action': '1', 'speed': 0.09}
 		while True:
 			try:
@@ -342,10 +344,14 @@ class LineDetection(WorkerProcess):
 					if inParking == 1:
 						print("__________________111111111111 ", inParkingTime)
 						if inParkingTime == 0:
+							msg = {'action': '2', 'steerAngle': -16.0}
+							for outP in outPs:
+								outP.send(msg)
+						if inParkingTime == 1:
 							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
 								outP.send(msg)
-						if 0 < inParkingTime < 39:
+						if 1 < inParkingTime < 39:
 							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
@@ -385,12 +391,12 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if 67 < inParkingTime < 69:
+						if 64 < inParkingTime < 66:
 							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 69:
+						if inParkingTime == 66:
 							inParkingTime = 0
 							inParking = 0
 							msg = {'action': '1', 'speed': 0.0}
@@ -398,6 +404,14 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						inParkingTime += 1
+					elif is_priority == True:
+						if time_p == 8:
+							msg = {'action': '2', 'steerAngle': -22.0}
+							for outP in outPs:
+								outP.send(msg)
+						if time_p == 15:
+							is_priority = False
+						time_p += 1
 					else:
 						if  sign == 2 :
 							isStop = False
@@ -412,13 +426,8 @@ class LineDetection(WorkerProcess):
 									print("salje")
 									outP.send(msg)
 									flag = 0
-							elif 10 <= time < 36: #raskrsnica
+							elif 10 <= time < 35: #raskrsnica
 								msg = {'action': '1', 'speed': 0.09}
-								for outP in outPs:
-									outP.send(msg)
-									flag = 0
-							elif time == 36:
-								msg = {'action': '2', 'steerAngle': 8.0}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
@@ -433,6 +442,8 @@ class LineDetection(WorkerProcess):
 						elif sign == 1:
 							inParking = 1
 							flag = 0
+						elif sign == 0:
+							is_priority = True
 						else:
 							if lines is None:
 								isDetected = False
@@ -443,7 +454,7 @@ class LineDetection(WorkerProcess):
 								black_lines = self.display_lines(copy_frame, averaged_lines)
 								lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
 								if prev == 4 and pick_left_line >= 2 and ignore_left_line == False:
-									msg = {'action': '2', 'steerAngle': 18.0}
+									msg = {'action': '2', 'steerAngle': 22.0}
 									prev = -100
 									pick_left_line = 0
 								else:
