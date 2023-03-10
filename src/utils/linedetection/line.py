@@ -134,16 +134,16 @@ class LineDetection(WorkerProcess):
 		tolerance = 5
 		print("AVG: ", avg)
 		
-		if 125 - tolerance < avg < tolerance + 125:
+		if 5 - tolerance < avg < tolerance - 10:
 			print("PRVENSTVO PROLAZA")
 			return True, 0
 		#elif 75 - tolerance < avg < tolerance + 75:
 		#	print("PJESACKI")
 		#	return True
-		elif 78 - tolerance < avg < tolerance + 78:
+		elif 77 - tolerance < avg < tolerance + 77:
 			print("PARKING")
 			return True, 1
-		elif 115 - tolerance < avg < tolerance + 115:
+		elif 118 - tolerance < avg < tolerance + 118:
 			print("STOP")
 			return True, 2
 		else:
@@ -177,6 +177,7 @@ class LineDetection(WorkerProcess):
 		for contour in contours:
 			center, size, angle = cv2.minAreaRect(contour)
 			width, height = size
+			#print("====================================", width, " ", height, "=======================")
 			if width > 30 and width < 100 and height > 30 and height < 100 and abs(height - width)<10:
 				contour_list.append(contour)
 				position_y = round(center[0])
@@ -258,7 +259,8 @@ class LineDetection(WorkerProcess):
 		ignore_left_line = False
 		is_priority = False
 		time_p = 0
-		msg = {'action': '1', 'speed': 0.09}
+		parkiraj_se =  False
+		msg = {'action': '1', 'speed': -0.2}
 		while True:
 			try:
 				if flag == 1:
@@ -282,7 +284,7 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 							isRedLight = False
-					if isTraficLight == False:
+					if isTraficLight == False and is_priority == False:
 						isRedLight = True
 						msg = {'action': '1', 'speed': 0.00}
 						for outP in outPs:
@@ -341,77 +343,87 @@ class LineDetection(WorkerProcess):
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
-					if inParking == 1:
+					if inParking == 1 and parkiraj_se == False:
 						print("__________________111111111111 ", inParkingTime)
 						if inParkingTime == 0:
-							msg = {'action': '2', 'steerAngle': -16.0}
+							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
 								outP.send(msg)
 						if inParkingTime == 1:
 							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
 								outP.send(msg)
-						if 1 < inParkingTime < 39:
-							msg = {'action': '1', 'speed': 0.09}
+						if 1 < inParkingTime < 32:
+							msg = {'action': '1', 'speed':- 0.2}
 							for outP in outPs:
 								outP.send(msg)
 								#flag = 0
-						if inParkingTime == 39:
+						if inParkingTime == 32:
 							msg = {'action': '1', 'speed': 0.0}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 40:
+						if inParkingTime == 33:
 							msg = {'action': '2', 'steerAngle': 22.0}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if 40 < inParkingTime < 54:
+						if 33 < inParkingTime < 47:
 							msg = {'action': '1', 'speed': -0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 54:
+						if inParkingTime == 47:
 							msg = {'action': '2', 'steerAngle': -22.0}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if 54 < inParkingTime < 63:
+						if 47 < inParkingTime < 56:
 							msg = {'action': '1', 'speed': -0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 63:
+						if inParkingTime == 56:
 							msg = {'action': '1', 'speed': 0.0 }
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 64:
+						if inParkingTime == 57:
 							msg = {'action': '2', 'steerAngle': 18.0}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if 64 < inParkingTime < 66:
+						if 57 < inParkingTime < 59:
 							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 66:
+						if inParkingTime == 59:
 							inParkingTime = 0
 							inParking = 0
+							parkiraj_se = True
 							msg = {'action': '1', 'speed': 0.0}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
 						inParkingTime += 1
 					elif is_priority == True:
-						if time_p == 8:
+						if time_p < 14:
+							msg = {'action': '2', 'steerAngle': 0.0}
+							for outP in outPs:
+								outP.send(msg)
+						if 14 <= time_p < 36:
 							msg = {'action': '2', 'steerAngle': -22.0}
 							for outP in outPs:
 								outP.send(msg)
-						if time_p == 15:
+						if time_p == 36:
+							msg = {'action': '2', 'steerAngle': 0.0}
+							for outP in outPs:
+								outP.send(msg)
+						if  time_p == 37:
 							is_priority = False
 						time_p += 1
+						print("########: ",time_p)
 					else:
 						if  sign == 2 :
 							isStop = False
@@ -426,7 +438,7 @@ class LineDetection(WorkerProcess):
 									print("salje")
 									outP.send(msg)
 									flag = 0
-							elif 10 <= time < 35: #raskrsnica
+							elif 10 <= time < 37: #raskrsnica
 								msg = {'action': '1', 'speed': 0.09}
 								for outP in outPs:
 									outP.send(msg)
@@ -454,7 +466,7 @@ class LineDetection(WorkerProcess):
 								black_lines = self.display_lines(copy_frame, averaged_lines)
 								lanes = cv2.addWeighted(copy_frame, 0.8, black_lines, 1, 1)
 								if prev == 4 and pick_left_line >= 2 and ignore_left_line == False:
-									msg = {'action': '2', 'steerAngle': 22.0}
+									msg = {'action': '2', 'steerAngle': 18.0}
 									prev = -100
 									pick_left_line = 0
 								else:
@@ -469,7 +481,7 @@ class LineDetection(WorkerProcess):
 											msg = {'action': '2', 'steerAngle': 0.0}
 									elif direction == 4:
 										if pick_left_line < 2:
-											msg = {'action': '2', 'steerAngle': -22.0}
+											msg = {'action': '2', 'steerAngle': -18.0}
 											pick_left_line = pick_left_line + 1
 									else:
 										msg = {'action': '2', 'steerAngle': 0.0}
