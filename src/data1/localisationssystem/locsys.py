@@ -28,10 +28,10 @@
 
 from multiprocessing import Pipe
 from threading import Thread
-from src.data.localisationssystem.server_data import ServerData
-from src.data.localisationssystem.server_listener import ServerListener
-from src.data.localisationssystem.server_subscriber import ServerSubscriber
-from src.data.localisationssystem.position_listener import PositionListener
+from server_data import ServerData
+from server_listener import ServerListener
+from server_subscriber import ServerSubscriber
+from position_listener import PositionListener
 
 import time
 
@@ -86,8 +86,8 @@ class LocalisationSystem(Thread):
         self.__server_listener.stop()
         self.__position_listener.stop()
 
-"""if __name__ == '__main__':
-    beacon = 12345
+if __name__ == '__main__':
+    beacon = 12345 #12345
     id = 1
     serverpublickey = 'publickey_server_test.pem'
     
@@ -108,4 +108,3 @@ class LocalisationSystem(Thread):
     LocalisationSystem.stop()
 
     LocalisationSystem.join()
-"""

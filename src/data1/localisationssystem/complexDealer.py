@@ -26,38 +26,25 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
-import sys
-sys.path.insert(0,'.')
+import json
 
-"""ServerData class contains all parameter of server. It need to connect to the server.
-The parameters is updated by other class, like ServerListener and SubscribeToServer
-"""
-class ServerData:
+class ComplexEncoder(json.JSONEncoder):
+    def default(self, z):
+        if isinstance(z, complex):
+            return {'type':'complex', 'real':z.real, 'imag':z.imag}
+        else:
+            return super().default(z)
 
-	def __init__(self, beacon_port, server_IP = None):
-		#: ip address of server 
-		self.__server_ip = server_IP 
-		#: flag to mark, that the server is new. It becomes false, when the client subscribed on the server.
-		self.is_new_server = False
-		#: port, where the beacon server send broadcast messages
-		self.__beacon_port = beacon_port
-		#: port, where the server listen the car clients
-		self.serverSubscriptionPort = None
-		#: connection, which used to communicate with the server
-		self.socket = None
+class ComplexDecoder(json.JSONDecoder):
+	""" Json decoder for complex numbers. The decodeable message consists of two float number and a type marking, like below:
+			{'type':'complex','real':1.0,'imag':1/0}
+		It will return a complex number object.
+	"""
+	def __init__(self,*args,**kwargs):
+		super(ComplexDecoder,self).__init__(object_hook=self.object_hook,*args,**kwargs)
 
-	
-	@property
-	def beacon_port(self):
-		return self.__beacon_port
-
-	@property
-	def serverip(self):
-		return self.__server_ip
-
-	@serverip.setter
-	def serverip(self, server_ip):
-		if self.__server_ip != server_ip:
-			self.__server_ip = server_ip
-			self.is_new_server = False
-	
+	def object_hook(self,dct):
+		# Checking the parameters of dictionary. 
+		if 'type' in dct and dct['type'] == 'complex' :	
+			return complex(dct['real'],dct['imag'])
+		return dct

@@ -33,7 +33,7 @@ sys.path.insert(0,'.')
 
 import socket
 
-from src.data.livetraffic.utils import load_public_key, load_private_key, verify_data, sign_data
+from utils import load_public_key, load_private_key, verify_data, sign_data
 
 class ServerSubscriber:
 	""" It has role to subscribe on the server, to create a connection and verify the server authentication.
@@ -95,9 +95,7 @@ class ServerSubscriber:
 			
 			print("Connected to ",self.__server_data.serverip)
 			self.__server_data.socket = sock
-			
 			self.__server_data.is_new_server = False
-			#print("*********")
 		
 		except Exception as e:
 			print("Failed to connect on server with error: " + str(e))

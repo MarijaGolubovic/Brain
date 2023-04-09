@@ -31,21 +31,18 @@ sys.path.insert(0,'.')
 
 import socket
 import json
-from src.data.localisationssystem.complexDealer import ComplexDecoder
+import time
 
-
-
-class PositionListener:
-	"""PositionListener aims to receive all message from the server. 
-	"""
-	def __init__(self, server_data, streamPipe):
+class Streamer:
+	
+	def __init__(self,server_data, streamPipe):
+		"""Streamer aims to send all message to the server. 
+		"""
 		
 		self.__server_data = server_data 
-		
+		self.socket_pos = None
 		self.__streamP_pipe = streamPipe
 		
-		self.socket_pos = None
-
 		self.__running = True
 
 	def stop(self):
@@ -53,39 +50,34 @@ class PositionListener:
 		try :
 			self.__server_data.socket.close()
 		except: pass
-	
-	def listen(self):
+		
+	def stream(self):
 		""" 
-		After the subscription on the server, it's listening the messages on the 
-		previously initialed socket. It decodes the messages and saves in 'coor'
-		member parameter. Each new messages will update this parameter. The server sends 
-		result (robot's coordination) of last detection. If the robot was detected by the localization 
-		system, the client will receive the same coordinate and timestamp. 
+		After the subscription on the server, it's publishing the messages on the 
+		previously initialed socket.
 		"""
-		missing = 0
 		while self.__running:
 			if self.__server_data.socket != None: 
 				try:
-					msg = self.__server_data.socket.recv(4096)
-					missing = 0
-					msg = msg.decode('utf-8')
-					if(msg == ''):
-						print('Invalid message. Connection can be interrupted.')
-						break
-					
-					coor = json.loads((msg),cls=ComplexDecoder)
-					self.__streamP_pipe.send(coor)
-				except socket.timeout:
-					print("position listener socket_timeout. Check if device is working")
-					missing =+1 
-					if missing > 4: raise Exception
-					pass
+					msg = self.__streamP_pipe.recv()
+					data = {'OBS': msg['obstacle_id'], 'x': msg['x'], "y": msg['y']}
+					msg = json.dumps((data))
+					try:
+						self.__server_data.socket.sendall(msg.encode('utf-8'))
+					except:
+						self.__server_data.socket.sendall(msg)
+					time.sleep(0.25)
+					self.sent = True
 				except Exception as e:
 					self.__server_data.socket.close()
+					self.__server_data.is_new_server = False
 					self.__server_data.socket = None
-					print("connection with device failed with error: " + str(e))
+					print("Sending data to server " + str(self.__server_data.serverip) + " failed with error: " + str(e))
 					self.__server_data.serverip = None
-					break
-		self.__server_data.is_new_server = False
-		self.__server_data.socket = None
-		self.__server_data.serverip = None
+				finally: 
+					pass
+			
+		else:
+			self.__server_data.is_new_server = False
+			self.__server_data.socket = None
+			self.__server_data.serverip = None

@@ -26,38 +26,37 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
-import sys
-sys.path.insert(0,'.')
+# Module imports
+import time
+# Module required for getting semaphore broadcast messages
+import trafficlights
 
-"""ServerData class contains all parameter of server. It need to connect to the server.
-The parameters is updated by other class, like ServerListener and SubscribeToServer
-"""
-class ServerData:
+## Method for running the listener example.
+#  @param none
+def runListener():
 
-	def __init__(self, beacon_port, server_IP = None):
-		#: ip address of server 
-		self.__server_ip = server_IP 
-		#: flag to mark, that the server is new. It becomes false, when the client subscribed on the server.
-		self.is_new_server = False
-		#: port, where the beacon server send broadcast messages
-		self.__beacon_port = beacon_port
-		#: port, where the server listen the car clients
-		self.serverSubscriptionPort = None
-		#: connection, which used to communicate with the server
-		self.socket = None
+    # Semaphore colors list
+    colors = ['red','yellow','green']   
 
-	
-	@property
-	def beacon_port(self):
-		return self.__beacon_port
+    # Get time stamp when starting tester
+    start_time = time.time()
+    # Create listener object
+    Semaphores = trafficlights.trafficlights()
+    # Start the listener
+    Semaphores.start()
+    # Wait until 60 seconds passed
+    while (time.time()-start_time < 60):
+        # Clear the screen
+        print("\033c")
+        print("Example program that gets the states of each\nsemaphore from their broadcast messages\n")
+        # Print each semaphore's data
+        print("S1 color " + colors[Semaphores.s1_state] + ", code " + str(Semaphores.s1_state) + ".")
+        print("S2 color " + colors[Semaphores.s2_state] + ", code " + str(Semaphores.s2_state) + ".")
+        print("S3 color " + colors[Semaphores.s3_state] + ", code " + str(Semaphores.s3_state) + ".")
+        print("S4 color " + colors[Semaphores.s4_state] + ", code " + str(Semaphores.s4_state) + ".")
+        time.sleep(0.5)
+    # Stop the listener
+    Semaphores.stop()
 
-	@property
-	def serverip(self):
-		return self.__server_ip
-
-	@serverip.setter
-	def serverip(self, server_ip):
-		if self.__server_ip != server_ip:
-			self.__server_ip = server_ip
-			self.is_new_server = False
-	
+if __name__ == "__main__":
+    runListener()

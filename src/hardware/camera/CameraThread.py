@@ -29,6 +29,7 @@
 import io
 import numpy as np
 import time
+import cv2
 
 from src.templates.threadwithstop import ThreadWithStop
 
@@ -68,6 +69,8 @@ class CameraThread(ThreadWithStop):
             self.camera.start_recording('picam'+ self._get_timestamp()+'.h264',format='h264')
 
         # Sets a callback function for every unpacked frame
+        #self._streams()
+        
         self.camera.capture_sequence(
                                     self._streams(), 
                                     use_video_port  =   True, 
@@ -85,7 +88,7 @@ class CameraThread(ThreadWithStop):
         
         # this how the firmware works.
         # the camera has to be imported here
-        from picamera import PiCamera # picamera #PiCamera
+        from picamera import PiCamera# picamera #PiCamera
 
         # camera
         self.camera = PiCamera() #PiCamera
@@ -123,6 +126,8 @@ class CameraThread(ThreadWithStop):
             yield self._stream
             self._stream.seek(0)
             data = self._stream.read()
+            #cv2.imshow()
+            #cv2.wait_key(1)
 
             # read and reshape from bytes to np.array
             data  = np.frombuffer(data, dtype=np.uint8)

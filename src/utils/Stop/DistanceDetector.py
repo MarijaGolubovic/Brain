@@ -67,7 +67,7 @@ class Distance(WorkerProcess):
 					command = {'action': '1', 'speed': 0.00}
 				else :
 					if block == 1:
-						command = {'action': '1', 'speed': 0.19}
+						command = {'action': '1', 'speed': 0.09}
 					block = 0;
 				for outP in self.outPs:
 					outP.send(command)

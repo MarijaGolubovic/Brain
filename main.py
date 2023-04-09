@@ -96,7 +96,7 @@ if enableStream:
     #allProcesses.append(streamProc)
     #streamProc = CameraStreamerProcess([camStR], [])
     #allProcesses.append(streamProc)
-
+    
 
 # =============================== DATA ===================================================
 #LocSys client process

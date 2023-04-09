@@ -28,11 +28,10 @@
 
 from threading import Thread
 from multiprocessing import Pipe
-
-from src.data.livetraffic.server_listener import ServerListener
-from src.data.livetraffic.server_subscriber import ServerSubscriber
-from src.data.livetraffic.streamer import Streamer
-from src.data.livetraffic.server_data import ServerData
+from server_data import ServerData
+from server_listener import ServerListener
+from server_subscriber import ServerSubscriber
+from streamer import Streamer
 
 import time
 import random
@@ -89,7 +88,6 @@ class EnvironmentalHandler(Thread):
         self.__server_listener.stop()
         self.__streamer.stop()
 
-
 if __name__ == '__main__':
     beacon = 23456
 
@@ -126,4 +124,3 @@ if __name__ == '__main__':
         
     envhandler.stop()
     envhandler.join()
-

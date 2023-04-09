@@ -73,32 +73,25 @@ class ServerListener:
 					data, server_ip = s.recvfrom(1500, 0)
 
 					# convert the received message
-					date = data.decode("utf-8").split(",")
-
-					if date[0] == "loc":
-						subscriptionPort = int(date[1])
+					subscriptionPort = int(data.decode("utf-8"))
 					
-						# actualize the parameter of server_data with new IP address and communication port
-						self.__server_data.serverip = server_ip[0]
-						self.__server_data.serverSubscriptionPort = subscriptionPort
-						
-						self.__server_data.is_new_server = True
-					else:
-						print("cannot find correct server. Try again...")
+					# actualize the parameter of server_data with new IP address and communication port
+					self.__server_data.serverip = server_ip[0]
+					self.__server_data.carSubscriptionPort = subscriptionPort
+					
+					self.__server_data.is_new_server = True
 				except socket.timeout as e:
-					print("cannot find server. Check if server is open and on the same network")
+					print("cannot find server")
 					# Cannot find the server. Need to repeat the process.
 					pass
 				except ValueError as e:
-					print("Wrong message received")
+					print("Wrong message")
 					# Wrong message was received. Need to repeat the process.
 					pass
 
 		except Exception as e:
 			# Cannot initialize the socket for broadcast message listening or other unexpected error.   
-			self.__server_data.is_new_server = False
-			self.__server_data.socket = None
 			self.__server_data.serverip = None	# Server is dead
-			print ("Can't initialize beacon socket. Check if port is not already opened. Error:" + str(e))
+			print ("Error:" + str(e))
 		finally:
 			s.close()

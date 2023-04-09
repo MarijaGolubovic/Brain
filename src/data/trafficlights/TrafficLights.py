@@ -42,6 +42,5 @@ class TraficDetector(WorkerProcess):
 				command = {'action': '1', 'speed': 0.30}
 			else :
 				command = {'action': '1', 'speed': 0.00}
-			for outP in outPs:
-				outP.send(command)
+			print(command)
 		Semaphores.stop()

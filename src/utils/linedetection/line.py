@@ -4,8 +4,14 @@ import socket
 import struct
 #import matplotlib.pyplot as plt
 import numpy as np
+import src.data.trafficlights.trafficlights as trafficlights
+import src.data.vehicletovehicle.vehicletovehicle as vehicletovehicle
+from src.data.livetraffic.livetraffic import EnvironmentalHandler
+from src.data.localisationssystem.locsys import LocalisationSystem
 import time
+import random
 from threading import Thread
+from multiprocessing import Pipe
 
 class LineDetection(WorkerProcess):
 	flag = 1
@@ -215,14 +221,27 @@ class LineDetection(WorkerProcess):
 		if self._blocker.is_set():
 			return 
 		StreamTh = Thread(name='LaneDetectionThread', target = self._send_thread, args= (self.inPs[0], self.outPs))
+		#StreamSerTL = Thread(name = 'TraficLiteThread', target = self._TraficLightServer, args = ())
+		#StreamSerVl = Thread(name = 'Viacle2ViacleThread', target = self._ViacleToViacle, args = ())
+		#StreamSerLT = Thread(name = 'LiveTraficThread', target = self._LiveTrafic, args = ())
+		StreamserLoc = Thread(name = 'LocalizationThread', target = self._Localization, args = ())
 		StreamTh.daemon = True
 		self.threads.append(StreamTh)
+		#StreamSerTL.daemon = True
+		#self.threads.append(StreamSerTL)
+		#StreamSerVl.daemon = True
+		#self.threads.append(StreamSerVl)
+		#StreamSerLT.daemon = True
+		#self.threads.append(StreamSerLT)
+		StreamserLoc.daemon = True
+		self.threads.append(StreamserLoc)
+		
 		
 	 # ===================================== INIT SOCKET ==================================
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.174.149' # PC ip
+		self.serverIp   =  '192.168.0.103' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -242,6 +261,115 @@ class LineDetection(WorkerProcess):
 			pass
 
 		
+	def _Localization(self):
+		beacon = 12345 #12345
+		id = 1
+		print("5555555")
+		serverpublickey = 'src/data/localisationssystem/publickey_server_test.pem'
+		
+		gpsStR, gpsStS = Pipe(duplex = False)
+		
+		localisationSystem = LocalisationSystem(id, beacon, serverpublickey, gpsStS)
+		localisationSystem.start()  
+		print("000000")
+		time.sleep(5)
+		while True:
+			try:
+				if gpsStR.poll():
+					coora = gpsStR.recv()
+				print(coora['timestamp'], coora['pos'].real, coora['pos'].imag)
+			except KeyboardInterrupt:
+				break
+			
+		localisationSystem.stop()
+
+		localisationSystem.join()
+	
+	def _TraficLightServer(self):
+		colors = ['red','yellow','green']   
+		# Get time stamp when starting tester
+		start_time = time.time()
+		# Create listener object
+		Semaphores = trafficlights.trafficlights()
+		# Start the listener
+		Semaphores.start()
+		# Wait until 60 seconds passed
+		while (time.time()-start_time < 60):
+		# Clear the screen
+#print("\033c")
+			print("Example program that gets the states of each semaphore from their broadcast messages\n")
+			# Print each semaphore's data
+			print("S1 color " + colors[Semaphores.s1_state] + ", code " + str(Semaphores.s1_state) + ".")
+			print("S2 color " + colors[Semaphores.s2_state] + ", code " + str(Semaphores.s2_state) + ".")
+			print("S3 color " + colors[Semaphores.s3_state] + ", code " + str(Semaphores.s3_state) + ".")
+			print("S4 color " + colors[Semaphores.s4_state] + ", code " + str(Semaphores.s4_state) + ".")
+			time.sleep(0.5)
+			if Semaphores.s1_state == 1:
+				command = {'action': '1', 'speed': 0.30}
+			else :
+				command = {'action': '1', 'speed': 0.00}
+			#print(command)
+		Semaphores.stop()
+		
+	def _ViacleToViacle(self):
+		# Get time stamp when starting tester
+		start_time = time.time()
+		# Create listener object
+		print("--------------------------")
+		vehicle = vehicletovehicle.vehicletovehicle()
+		# Start the listener
+		print("--------------------------")
+		vehicle.start()
+		print("--------------------------")
+		# Wait until 60 seconds passed
+		while (time.time()-start_time < 60):
+			# Clear the screen
+			print("Example program that gets the info of the last car infos\n")
+			# Print each received msg
+			print("ID ", vehicle.ID, ", timestamp", vehicle.timestamp, ", coor ", vehicle.pos, ", angle ", vehicle.ang)
+			time.sleep(0.5)
+		# Stop the listener
+		vehicle.stop()
+			
+			
+	def _LiveTrafic(self):
+		beacon = 23456
+
+		id = 120
+		serverpublickey = 'src/data/livetraffic/publickey_livetraffic_server_test.pem'
+		clientprivatekey = 'src/data/livetraffic/privatekey_livetraffic_client_test.pem'
+
+		#: For testing purposes, with the provided simulated livetraffic_system, the pair of keys above is used
+		#       -   "publickey_livetraffic_server_test.pem"     --> Ensure by the client that the server is the actual server
+		#       -   "privatekey_livetraffic_client_test.pem"    --> Ensure by the server that the client is the actual client
+
+		#: At Bosch location during the competition 
+		#       -   Use the "publickey_livetraffic_server.pem" instead of the "publickey_livetraffic_server_test.pem" 
+		#       -   As for the "publickey_livetraffic_client.pem", you will have to generate a pair of keys, private and public, using the following terminal lines.  Before the competition, instruction of where to send your publickey_livetraffic_client.pem will be given.
+
+		#: openssl genrsa -out privateckey_livetraffic_client.pem 2048 ----> Creates a private ssh key and stores it in the current dir with the given name
+		#: openssl rsa -in privateckey_livetraffic_client.pem -pubout -out publickey_livetraffic_client.pem ----> Creates the corresponding public key out of the private one. 
+
+		#:
+		#: To test the functionality, 
+		#       -   copy the generated public key under test/livetrafficSERVER/keys 
+		#       -   rename the key using this format: "id_publickey.pem" ,where the id is the id of the key you are trying to connect with
+		#       -   The given example connects with the id 120 and the same key is saved with "120_publickey.pem"
+		
+		gpsStR, gpsStS = Pipe(duplex = False)
+		print("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
+		envhandler = EnvironmentalHandler(id, beacon, serverpublickey, gpsStR, clientprivatekey)
+		envhandler.start()
+		print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+		time.sleep(5)
+		for x in range(1, 10):
+			time.sleep(random.uniform(1,5))
+			a = {"obstacle_id": int(random.uniform(0,25)), "x": random.uniform(0,15), "y": random.uniform(0,15)}
+			
+			gpsStS.send(a)
+			
+		envhandler.stop()
+		envhandler.join()
 	def _send_thread(self, inP, outPs):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
 		flag = 1
@@ -262,7 +390,7 @@ class LineDetection(WorkerProcess):
 		parkiraj_se =  False
 		ne_radi_stop = False
 		mozes_prvenstvo = False
-		msg = {'action': '1', 'speed': 0.19}
+		msg = {'action': '1', 'speed': 0.09}
 		while True:
 			try:
 				if flag == 1:
@@ -282,7 +410,7 @@ class LineDetection(WorkerProcess):
 						print("ITS OKAY")
 					if isTraficLight == True:
 						if isRedLight == True:
-							msg = {'action': '1', 'speed': 0.19}
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 							isRedLight = False
@@ -356,7 +484,7 @@ class LineDetection(WorkerProcess):
 						#	for outP in outPs:
 						#		outP.send(msg)
 						if 0< inParkingTime < 30:
-							msg = {'action': '1', 'speed': 0.19}
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -381,7 +509,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 86 < inParkingTime < 113 :
-							msg = {'action': '1', 'speed': -0.19}
+							msg = {'action': '1', 'speed': -0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -391,7 +519,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 113 < inParkingTime < 134:
-							msg = {'action': '1', 'speed': -0.19}
+							msg = {'action': '1', 'speed': -0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -420,12 +548,12 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if 144 < inParkingTime < 154:
-							msg = {'action': '1', 'speed': 0.19}
+						if 144 < inParkingTime < 160:
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						if inParkingTime == 154:
+						if inParkingTime == 160: #154
 							msg = {'action': '2', 'steerAngle': 0.0}
 							inParkingTime = 0
 							inParking = 0
@@ -436,11 +564,11 @@ class LineDetection(WorkerProcess):
 								flag = 0
 						inParkingTime += 1
 					elif is_priority == True and mozes_prvenstvo == True:
-						if time_p < 45:
+						if time_p < 42:
 							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
 								outP.send(msg)
-						if 45 <= time_p < 92:
+						if 42 <= time_p < 92:
 							msg = {'action': '2', 'steerAngle': -22.0}
 							for outP in outPs:
 								outP.send(msg)
@@ -449,11 +577,12 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 						if 92 < time_p  < 110:
-							msg = {'action': '1', 'speed': 0.19}
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 						if  time_p == 110:
 							is_priority = False
+							mozes_prvenstvo = False
 						time_p += 1
 						print("########: ",time_p)
 					else:
@@ -475,7 +604,7 @@ class LineDetection(WorkerProcess):
 								for outP in outPs:
 									outP.send(msg)
 							elif 10 < time < 70: #raskrsnica
-								msg = {'action': '1', 'speed': 0.19}
+								msg = {'action': '1', 'speed': 0.09}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
@@ -491,7 +620,7 @@ class LineDetection(WorkerProcess):
 								isStop = True
 								ne_radi_stop = True
 								sign = -1
-								msg = {'action': '1', 'speed': 0.19}
+								msg = {'action': '1', 'speed': 0.09}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
@@ -571,6 +700,8 @@ class LineDetection(WorkerProcess):
 				#pass
 
 	def stop(self):
+		vehicle.stop()
+		Semaphores.stop()
 		print("stoppppppppp line")
 		msg = {'action': '1', 'speed': 0.0}
 		for outP in self.outPs:
