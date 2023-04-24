@@ -76,7 +76,7 @@ class SerialHandlerProcess(WorkerProcess):
         """ Initializes the read and the write thread.
         """
         # read write thread        
-        readTh  = ReadThread(self.serialCom,self.historyFile)
+        readTh  = ReadThread(self.serialCom,self.historyFile, self.inPs, self.outPs)
         self.threads.append(readTh)
         print("pre write threada")
         writeTh = WriteThread(self.inPs[0], self.serialCom, self.historyFile)

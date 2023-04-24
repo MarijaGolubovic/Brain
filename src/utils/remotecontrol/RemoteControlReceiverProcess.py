@@ -60,7 +60,7 @@ class RemoteControlReceiverProcess(WorkerProcess):
         """Initialize the communication socket server.
         """
         self.port       =   12244
-        self.serverIp   =   '192.168.220.1'
+        self.serverIp   =   '192.168.0.111'
 
         self.server_socket = socket.socket(
                                     family  = socket.AF_INET, 
@@ -72,10 +72,19 @@ class RemoteControlReceiverProcess(WorkerProcess):
     def _init_threads(self):
         """Initialize the read thread to transmite the received messages to other processes. 
         """
+        helpTh = Thread(name='ReceiverdistanceThread',target = self._help_stream, args = (self.inPs, ))
         readTh = Thread(name='ReceiverCommandThread',target = self._read_stream, args = (self.outPs, ))
         self.threads.append(readTh)
+        self.threads.append(helpTh)
 
     # ===================================== READ STREAM ==================================
+    def _help_stream(self, inPs):
+        while True:
+            msg = inPs[0].recv()
+            print("5555")
+            print(msg)
+            print("8888")
+    
     def _read_stream(self, outPs):
         """Receive the message and forwards them to the SerialHandlerProcess. 
         

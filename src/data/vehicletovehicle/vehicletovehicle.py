@@ -74,7 +74,7 @@ class vehicletovehicle(Thread):
 
                 self.ID = int(data['id'])
 
-                self.timestamp = float(data['timestamp'])
+                #self.timestamp = float(data['timestamp'])
 
                 self.pos = complex(data['coor'])
 

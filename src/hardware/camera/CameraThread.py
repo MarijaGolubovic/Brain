@@ -30,6 +30,7 @@ import io
 import numpy as np
 import time
 import cv2
+import threading
 
 from src.templates.threadwithstop import ThreadWithStop
 
@@ -63,14 +64,35 @@ class CameraThread(ThreadWithStop):
         """Apply the initializing methods and start the thread. 
         """
         self._init_camera()
-        
+        print("camera inited")
         # record mode
         if self.recordMode:
             self.camera.start_recording('picam'+ self._get_timestamp()+'.h264',format='h264')
-
         # Sets a callback function for every unpacked frame
-        #self._streams()
+        #self.camera.start()
+        #time.sleep(1)
+        #data = io.BytesIO()
+        #self.camera.capture_file(data, format='jpeg')
+        #data = data.getbuffer().nbytes
+        #data  = np.frombuffer(data, dtype=np.uint8)
+        #data  = np.reshape(data, (480, 640, 3))
+        #stamp = time.time()
+            
+        # output image and time stamp
+        # Note: The sending process can be blocked, when doesn't exist any consumer process and it reaches the limit size.
+        #for outP in self.outPs:
+            #print("bilo sta \n")
+         #   outP.send([[stamp], data])
+        #time.sleep(1)
         
+        #data = io.BytesIO()
+        #self.camera.switch_mode_and_capture_file(data, format='jpeg')
+        #print(data.getbuffer().nbytes)
+        
+        """self.capture_sequence(self._streams(), 
+                                    use_video_port  =   True, 
+                                    format          =   'rgb',
+                                    resize          =   self.imgSize)"""
         self.camera.capture_sequence(
                                     self._streams(), 
                                     use_video_port  =   True, 
@@ -143,5 +165,76 @@ class CameraThread(ThreadWithStop):
             
             self._stream.seek(0)
             self._stream.truncate()
+            
+    def capture_sequence(
+            self, outputs, format='jpeg', use_video_port=False, resize=None,
+            splitter_port=0, burst=False, bayer=False, **options):
+        encoders_lock = threading.Lock()
+        if use_video_port:
+            if burst:
+                raise PiCameraValueError(
+                    'burst is only valid with still port captures')
+            if bayer:
+                raise PiCameraValueError(
+                    'bayer is only valid with still port captures')
+        with encoders_lock:
+            camera_port, output_port = self._get_ports(use_video_port, splitter_port)
+            format = self.camera._get_image_format('', format)
+            if use_video_port:
+                encoder = self.camera._get_images_encoder(
+                        camera_port, output_port, format, resize, **options)
+                self.camera._encoders[splitter_port] = encoder
+            else:
+                encoder = self.camera._get_image_encoder(
+                        camera_port, output_port, format, resize, **options)
+        try:
+            if use_video_port:
+                encoder.start(outputs)
+                encoder.wait()
+            else:
+                if burst:
+                    camera_port.params[mmal.MMAL_PARAMETER_CAMERA_BURST_CAPTURE] = True
+                try:
+                    for output in outputs:
+                        if bayer:
+                            camera_port.params[mmal.MMAL_PARAMETER_ENABLE_RAW_CAPTURE] = True
+                        encoder.start(output)
+                        if not encoder.wait(self.CAPTURE_TIMEOUT):
+                            raise PiCameraRuntimeError(
+                                'Timed out waiting for capture to end')
+                finally:
+                    if burst:
+                        camera_port.params[mmal.MMAL_PARAMETER_CAMERA_BURST_CAPTURE] = False
+        finally:
+            encoder.close()
+            with self._encoders_lock:
+                if use_video_port:
+                    del self._encoders[splitter_port]
+
+    def _get_ports(self, from_video_port, splitter_port):
+        """
+        Determine the camera and output ports for given capture options.
+
+        See :ref:`camera_hardware` for more information on picamera's usage of
+        camera, splitter, and encoder ports. The general idea here is that the
+        capture (still) port operates on its own, while the video port is
+        always connected to a splitter component, so requests for a video port
+        also have to specify which splitter port they want to use.
+        """
+        #self._check_camera_open()
+        #if from_video_port :
+         #   raise PiCameraAlreadyRecording(
+          #          'The camera is already using port %d ' % splitter_port)
+        camera_port = (
+            self.camera.outputs[self.CAMERA_VIDEO_PORT]
+            if from_video_port else
+            self.camera.outputs[self.CAMERA_CAPTURE_PORT]
+            )
+        output_port = (
+            self._splitter.outputs[splitter_port]
+            if from_video_port else
+            camera_port
+            )
+        return (camera_port, output_port)
 
 

@@ -25,11 +25,12 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
-
+from threading import Thread
 from src.templates.threadwithstop import ThreadWithStop
 
 class ReadThread(ThreadWithStop):
-    def __init__(self,f_serialCon,f_logFile):
+#class ReadThread(Thread):
+    def __init__(self,f_serialCon,f_logFile,inPs,outPs):
         """ The role of this thread is to receive the messages from the micro-controller and to redirectionate them to the other processes or modules. 
         
         Parameters
@@ -39,6 +40,7 @@ class ReadThread(ThreadWithStop):
         f_logFile : FileHandler
             The log file handler object for saving the received messages.
         """
+        self.outPs = outPs
         super(ReadThread,self).__init__()
         self.serialCon=f_serialCon
         self.logFile=f_logFile
@@ -67,7 +69,19 @@ class ReadThread(ThreadWithStop):
                 if self.isResponse:
                     self.buff+=read_chr
                 self.logFile.write(read_chr)
-                 
+                #print("555555555")
+                msg = self.buff.split(":")
+                if len(msg)==2:
+                    msg = msg[1]
+                    if msg.find(";") != -1:
+                        msg = msg[0:len(msg)-1]
+                    if msg.find(";") != -1:
+                        msg = msg[0:len(msg)-1]
+                    for outP in self.outPs:
+                        outP.send(msg)
+                    #print(msg)
+                #print(self.buff)
+                #print("333333333")
             except UnicodeDecodeError:
                 pass
 

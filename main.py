@@ -64,10 +64,11 @@ if enableStream:
     camStR, camStS = Pipe(duplex = False)           # camera  ->  line
     rcShR, rcShS   = Pipe(duplex = False)
     hcShR, hcShS   = Pipe(duplex = False)
+    shShR, shShS   = Pipe(duplex = False)
     camLineShR, camLineShS = Pipe(duplex = False)       # line    ->  streamer
 
 
-    shProc = SerialHandlerProcess([hcShR], [])
+    shProc = SerialHandlerProcess([hcShR], [shShS])
     allProcesses.append(shProc)
     if enableCameraSpoof:
         camSpoofer = CameraSpooferProcess([],[camStS],'vid')
@@ -80,7 +81,7 @@ if enableStream:
     #IMUproc = imu([camLineShR],[rcShS])
     #allProcesses.append(IMUproc)
     
-    camLine = LineDetection([camStR],[rcShS])  
+    camLine = LineDetection([camStR],[rcShS], [shShR])  
     allProcesses.append(camLine)
     
     test = Distance([rcShR],[hcShS])
@@ -127,9 +128,9 @@ if enableData:
 # =============================== CONTROL =================================================
 if enableRc:
     rcShR, rcShS   = Pipe(duplex = False)           # rc      ->  serial handler
-
+    rcHsR, rcHsS   = Pipe(duplex = False)
     # serial handler process
-    shProc = SerialHandlerProcess([rcShR], [])
+    shProc = SerialHandlerProcess([rcShR], [rcHsS])
     allProcesses.append(shProc)
     
     #shProc = SerialHandlerProcess([rcSer], [])     prima podatke od kamere i salje na nukleus
@@ -139,7 +140,7 @@ if enableRc:
     #test = Distance([],[rcShS])
     #allProcesses.append(test)
     
-    rcProc = RemoteControlReceiverProcess([],[rcShS])
+    rcProc = RemoteControlReceiverProcess([rcHsR],[rcShS])
     allProcesses.append(rcProc)
 
 # ==================================================
