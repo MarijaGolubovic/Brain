@@ -71,32 +71,17 @@ class ReadThread(ThreadWithStop):
                 self.logFile.write(read_chr)
                 #print("555555555")
                 msg = self.buff.split(":")
-                #print(msg)
-                #print(msg[0])
-                if len(msg) == 2 :
-                    if msg[0] == '@5':
-                        msg = msg[1]
-                        if msg.find(";") != -1:
-                            msg = msg[0:len(msg)-1]
-                        if msg.find(";") != -1:
-                            msg = msg[0:len(msg)-1]
-                        #print(msg)
-                        if msg != '':
-                            try:
-                                counter += float(msg)
-                            except:
-                                counter +=0
-                        #print(counter)
-                        #counter += float(msg)
-                        #print(counter)
-                        for outP in self.outPs:
-                            outP.send(counter)
-                        #print(msg)
-                        #counter += float(msg)
-                        #print(counter)
-                        #print(msg)
-                    #print(self.buff)
-                    #print("333333333")
+                if len(msg)==2:
+                    msg = msg[1]
+                    if msg.find(";") != -1:
+                        msg = msg[0:len(msg)-1]
+                    if msg.find(";") != -1:
+                        msg = msg[0:len(msg)-1]
+                    for outP in self.outPs:
+                        outP.send(msg)
+                    #print(msg)
+     /           #print(self.buff)
+                #print("333333333")
             except UnicodeDecodeError:
                 pass
 

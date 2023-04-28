@@ -1,7 +1,13 @@
+from skimage.metrics import structural_similarity as ssim
 from src.templates.workerprocess import WorkerProcess 
+
 import cv2 
 import socket 
 import struct
+
+
+
+#import matplotlib.pyplot as plt
 #import matplotlib.pyplot as plt
 import numpy as np
 import src.data.trafficlights.trafficlights as trafficlights
@@ -12,6 +18,8 @@ import time
 import random
 from threading import Thread
 from multiprocessing import Pipe
+
+#from skimage.metrics import structural_similarity as ssim
 
 class LineDetection(WorkerProcess):
 	flag = 1
@@ -32,11 +40,154 @@ class LineDetection(WorkerProcess):
 		self.polEnc = 0
 
 		self.inSh = inSh
+		
+		path = "imgs/"
+		stop = cv2.imread(path+"stopcut.png")
+		jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
+		prvenstvo = cv2.imread(path+"prvenstvocut.png")
+		parking = cv2.imread(path+"parkingcut.png")
+		pjesacki = cv2.imread(path+"pjesackicut.png")
+		autoput = cv2.imread(path+"autoputcut.png")
+		kraj_autoputa = cv2.imread(path+"kraj_autoputacut.png")
+		kruzni = cv2.imread(path+"kruznicut.png")
+		obavezno_pravo = cv2.imread(path+"obavezno_pravocut.png")
+		
+		self.blue = []
+		self.red = []
+		self.others = []
+		
+		#blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni"]
+		self.blue.append(parking)
+		self.blue.append(pjesacki)
+		self.blue.append(obavezno_pravo)
+		self.blue.append(kruzni)
+		
+		#red_signs = ["jednosmjerna", "stop"]
+		self.red.append(jednosmjerna)
+		self.red.append(stop)
+		
+		
+		#others_signs = ["prvenstvo", "autoput", "kraj_autoputa"]
+		self.others.append(prvenstvo)
+		self.others.append(autoput)
+		self.others.append(kraj_autoputa)
+		
+		
 		super(LineDetection, self).__init__(inPs, outPs, inSh)
 	
 	def run(self):
 		self._init_socket()
 		super(LineDetection, self).run()
+		
+	def crop_image(self, img):
+		h,w,_ = img.shape
+		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+		img = img[0:round(h/2), round(w/2):w,:]
+		#cv2.imshow("slika", img)
+		#cv2.waitKey(1)
+		print(img.shape)
+		
+		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+		h, s, v = cv2.split(hsv)
+		avg = np.average(h)
+		
+		return avg
+		
+	def compareImage(self, imageIn):
+		
+		
+		
+		h, w, _ = imageIn.shape
+		
+		
+		imgC = imageIn[0:round(h/3),round(3*w/4):w]
+		avg = self.crop_image(imgC)
+		print("*******",avg,"*******")
+		imgC = cv2.cvtColor(imgC, cv2.COLOR_BGR2GRAY)
+		imgC =cv2.resize(imgC, (80, 80), interpolation = cv2.INTER_AREA)
+		index = -1
+		res = []
+		
+		blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni"]
+		red_signs = ["jednosmjerna", "stop"]
+		others_signs = ["prvenstvo", "autoput", "kraj_autoputa"]
+		
+		group = -1
+		tolerance = 5 
+		
+		b = 106
+		r = 137
+		black = 100
+		
+		if black - tolerance < avg < tolerance + black:
+			print("NEMA ZNAKA")
+			group = 3
+			return 0
+		else:
+			if b - tolerance < avg < tolerance + b:
+				group = 0
+				print("PLAVI ZNAK")
+			elif r - tolerance < avg < tolerance + r:
+				group = 1
+				print("CRVENI ZNAK")
+			else:
+				group = 2
+				print("OSTALI ZNAKOVI")
+		
+		# group = 0 plavi znakovi, group = 1 crveni znakovi, group = 2 ostali, group = 3 nema znaka
+		if group == 0:
+			for img in self.blue:
+				#cv2.imshow("daj da radi", img)
+				#cv2.waitKey(0)
+				s = ssim(imgC, img[:,:,1])
+				res.append(s)
+			
+			index = res.index(max(res))
+			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
+			print(res)
+			if(max(res) < 0.3):
+				return 0
+			print("$$$$$$$$$", blue_signs[index])
+			
+			det_sign = blue_signs[index]
+			index = -1
+			return det_sign
+			
+		elif group == 1:
+			for img in self.red:
+				
+				s = ssim(imgC, img[:,:,1])
+				res.append(s)
+			
+			index = res.index(max(res))
+			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
+			print(res)
+			
+			if(max(res) < 0.3):
+				return 0
+			print("$$$$$$$$$", red_signs[index])
+			det_sign = red_signs[index]
+			index = -1
+			return det_sign
+		elif group == 2:
+			for img in self.others:
+				s = ssim(imgC, img[:,:,1])
+				res.append(s)
+			
+			index = res.index(max(res))
+			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
+			print(res)
+			
+			if(max(res) < 0.3):
+				return 0
+			print("$$$$$$$$$", others_signs[index])
+			det_sign = others_signs[index]
+			index = -1
+			return det_sign
+
+		#Signs = ["prvenstvo", "jednosmjerna", "stop", "parking", "autoput", "pjesacki", "kraj_autoputa", "kruzni", "obavezno_pravo"]
+
+		
 		
 	def gray(self, image):
 		#print("gray")
@@ -55,7 +206,7 @@ class LineDetection(WorkerProcess):
 	def region(self, image):
 		height, width = image.shape
 		mask = np.zeros_like(image)
-		h_min = int(height/2) + 50
+		h_min = int(height/2) - 50
 		h_max = int(height*3/4) 
 		w_min = int(width/2)
 		for i in range(h_min, h_max):
@@ -173,6 +324,7 @@ class LineDetection(WorkerProcess):
 
 	def traffic_light(self, img):
 		#crop image
+		
 		flag = True
 		h, w, _ = img.shape
 		w1 = w
@@ -269,7 +421,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.0.103' # PC ip
+		self.serverIp   =  '192.168.64.149' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -438,10 +590,11 @@ class LineDetection(WorkerProcess):
 		ignore_left_line = False
 		is_priority = False
 		time_p = 0
+		cur_flag = 1
 		parkiraj_se =  False
 		ne_radi_stop = False
 		mozes_prvenstvo = False
-		msg = {'action': '1', 'speed': 0.07}
+		msg = {'action': '1', 'speed': 0.12}
 		while True:
 			try:
 				if flag == 1:
@@ -449,19 +602,27 @@ class LineDetection(WorkerProcess):
 					stamps, frame = inP.recv()
 					lanes = frame
 					copy_frame = frame.copy()
+					"""
+					try:
+						print("#PREPOZNATI ZNAK JE: ",self.compareImage(test))
+					except Exception as e :
+						print(e)
+					"""
 					#copy_frame =  cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)	
 					height_signs, width_signs, _ = frame.shape
 					h, w, _ = frame.shape
 					grey = self.gray(frame)
 					blur = self.gauss(grey)
+					"""
 					try:
 						isTraficLight = self.traffic_light(copy_frame)
 					except:
 						isTraficLight = True
 						print("ITS OKAY")
+					"""
 					if isTraficLight == True:
 						if isRedLight == True:
-							msg = {'action': '1', 'speed': 0.07}
+							msg = {'action': '1', 'speed': 0.20}
 							for outP in outPs:
 								outP.send(msg)
 							isRedLight = False
@@ -471,6 +632,25 @@ class LineDetection(WorkerProcess):
 						for outP in outPs:
 							outP.send(msg)
 					else:
+						try:
+							detecSighn = self.compareImage(frame)
+						except Exception as e:
+							print(e)
+						print("%%%%%%%%%", detecSighn)
+						
+						if detecSighn == "parking":
+							is_sign_clasified = True
+							sign = 1
+						elif detecSighn == "prvenstvo":
+							is_sign_clasified = True
+							sign = 0
+						elif detecSighn == "stop":
+							is_sign_clasified = True
+							sign = 2
+						else:
+							is_sign_clasified = False
+							sign = 3
+					"""
 						try:
 							if  is_sign_clasified == False:
 								blur_signs = cv2.GaussianBlur(copy_frame, (27, 27), 0)
@@ -501,7 +681,8 @@ class LineDetection(WorkerProcess):
 
 
 										detected_frame = self.increase_brightness(detected_frame)
-
+										
+										print(wd, hd, "yrghushruhfu")
 										is_sign_clasified, sign = self.clasificate_img(detected_frame)
 										if is_sign_clasified:
 											is_sign_clasified = False
@@ -516,7 +697,7 @@ class LineDetection(WorkerProcess):
 								is_sign_clasified = False
 						except:
 							print("NO SIGN")
-
+					"""
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
 					lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
@@ -535,7 +716,7 @@ class LineDetection(WorkerProcess):
 						#	for outP in outPs:
 						#		outP.send(msg)
 						if 0< inParkingTime < 30:
-							msg = {'action': '1', 'speed': 0.07}
+							msg = {'action': '1', 'speed': 0.20}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -560,7 +741,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 86 < inParkingTime < 113 :
-							msg = {'action': '1', 'speed': -0.07}
+							msg = {'action': '1', 'speed': -0.20}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -570,7 +751,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 113 < inParkingTime < 134:
-							msg = {'action': '1', 'speed': -0.07}
+							msg = {'action': '1', 'speed': -0.20}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -585,7 +766,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 135 < inParkingTime < 139:
-							msg = {'action': '1', 'speed': 0.07}
+							msg = {'action': '1', 'speed': 0.20}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -600,7 +781,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 144 < inParkingTime < 160:
-							msg = {'action': '1', 'speed': 0.07}
+							msg = {'action': '1', 'speed': 0.20}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -629,7 +810,7 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 						if 92 < time_p  < 110:
-							msg = {'action': '1', 'speed': 0.07}
+							msg = {'action': '1', 'speed': 0.20}
 							for outP in outPs:
 								outP.send(msg)
 						if  time_p == 110:
@@ -645,7 +826,7 @@ class LineDetection(WorkerProcess):
 							self.ObstacleID = 1
 							time = time + 1
 							print("Time: ", time)
-							if time < 10:
+							if time < 20:
 								print("U if-u")
 								msg = {'action': '1', 'speed': 0.0}
 								for outP in outPs:
@@ -657,7 +838,7 @@ class LineDetection(WorkerProcess):
 								for outP in outPs:
 									outP.send(msg)
 							elif 10 < time < 18: #raskrsnica
-								msg = {'action': '1', 'speed': 0.07}
+								msg = {'action': '1', 'speed': 0.20}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
@@ -673,7 +854,7 @@ class LineDetection(WorkerProcess):
 								isStop = True
 								ne_radi_stop = True
 								sign = -1
-								msg = {'action': '1', 'speed': 0.07}
+								msg = {'action': '1', 'speed': 0.20}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0

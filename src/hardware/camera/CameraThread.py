@@ -31,6 +31,7 @@ import numpy as np
 import time
 import cv2
 import threading
+import os
 
 from src.templates.threadwithstop import ThreadWithStop
 
@@ -93,11 +94,13 @@ class CameraThread(ThreadWithStop):
                                     use_video_port  =   True, 
                                     format          =   'rgb',
                                     resize          =   self.imgSize)"""
-        self.camera.capture_sequence(
+        """self.camera.capture_sequence(
                                     self._streams(), 
                                     use_video_port  =   True, 
                                     format          =   'rgb',
-                                    resize          =   self.imgSize)
+                                    resize          =   self.imgSize)"""
+        while True:
+            self._streams()
         # record mode
         if self.recordMode:
             self.camera.stop_recording()
@@ -110,10 +113,10 @@ class CameraThread(ThreadWithStop):
         
         # this how the firmware works.
         # the camera has to be imported here
-        from picamera import PiCamera# picamera #PiCamera
+        from picamera2 import Picamera2# picamera #PiCamera
 
         # camera
-        self.camera = PiCamera() #PiCamera
+        self.camera = Picamera2() #PiCamera
 
 
         # camera settings
@@ -124,7 +127,8 @@ class CameraThread(ThreadWithStop):
         self.camera.shutter_speed   =   1200
         self.camera.contrast        =   5
         self.camera.iso             =   0 # auto
-        
+        camera_config = self.camera.create_still_configuration(main={"size": (640, 480)}, lores={"size": (640, 480)}, display="lores")
+        self.camera.configure(camera_config)
 
         self.imgSize                =   (640, 480)    # the actual image size
 
@@ -144,12 +148,17 @@ class CameraThread(ThreadWithStop):
         """
         br = 0
         while self._running:
+            self.camera.start()
+            self.camera.capture_file("test.jpg")
+            data = cv2.imread("test.jpg")
+            data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+            self.camera.stop()
             
-            yield self._stream
-            self._stream.seek(0)
-            data = self._stream.read()
-            #cv2.imshow()
-            #cv2.wait_key(1)
+            #yield self._stream
+            #self._stream.seek(0)
+            #data = self._stream.read()
+            #cv2.imshow('test', data)
+            #cv2.waitKey(0)
 
             # read and reshape from bytes to np.array
             data  = np.frombuffer(data, dtype=np.uint8)
@@ -162,79 +171,9 @@ class CameraThread(ThreadWithStop):
                 #print("bilo sta \n")
                 outP.send([[stamp], data])
 
-            
-            self._stream.seek(0)
-            self._stream.truncate()
-            
-    def capture_sequence(
-            self, outputs, format='jpeg', use_video_port=False, resize=None,
-            splitter_port=0, burst=False, bayer=False, **options):
-        encoders_lock = threading.Lock()
-        if use_video_port:
-            if burst:
-                raise PiCameraValueError(
-                    'burst is only valid with still port captures')
-            if bayer:
-                raise PiCameraValueError(
-                    'bayer is only valid with still port captures')
-        with encoders_lock:
-            camera_port, output_port = self._get_ports(use_video_port, splitter_port)
-            format = self.camera._get_image_format('', format)
-            if use_video_port:
-                encoder = self.camera._get_images_encoder(
-                        camera_port, output_port, format, resize, **options)
-                self.camera._encoders[splitter_port] = encoder
-            else:
-                encoder = self.camera._get_image_encoder(
-                        camera_port, output_port, format, resize, **options)
-        try:
-            if use_video_port:
-                encoder.start(outputs)
-                encoder.wait()
-            else:
-                if burst:
-                    camera_port.params[mmal.MMAL_PARAMETER_CAMERA_BURST_CAPTURE] = True
-                try:
-                    for output in outputs:
-                        if bayer:
-                            camera_port.params[mmal.MMAL_PARAMETER_ENABLE_RAW_CAPTURE] = True
-                        encoder.start(output)
-                        if not encoder.wait(self.CAPTURE_TIMEOUT):
-                            raise PiCameraRuntimeError(
-                                'Timed out waiting for capture to end')
-                finally:
-                    if burst:
-                        camera_port.params[mmal.MMAL_PARAMETER_CAMERA_BURST_CAPTURE] = False
-        finally:
-            encoder.close()
-            with self._encoders_lock:
-                if use_video_port:
-                    del self._encoders[splitter_port]
-
-    def _get_ports(self, from_video_port, splitter_port):
-        """
-        Determine the camera and output ports for given capture options.
-
-        See :ref:`camera_hardware` for more information on picamera's usage of
-        camera, splitter, and encoder ports. The general idea here is that the
-        capture (still) port operates on its own, while the video port is
-        always connected to a splitter component, so requests for a video port
-        also have to specify which splitter port they want to use.
-        """
-        #self._check_camera_open()
-        #if from_video_port :
-         #   raise PiCameraAlreadyRecording(
-          #          'The camera is already using port %d ' % splitter_port)
-        camera_port = (
-            self.camera.outputs[self.CAMERA_VIDEO_PORT]
-            if from_video_port else
-            self.camera.outputs[self.CAMERA_CAPTURE_PORT]
-            )
-        output_port = (
-            self._splitter.outputs[splitter_port]
-            if from_video_port else
-            camera_port
-            )
-        return (camera_port, output_port)
-
-
+            try:
+                os.remove("test.jpg")
+            except: 
+                print("there is no picture")
+            #self._stream.seek(0)
+            #self._stream.truncate()

@@ -45,7 +45,7 @@ class RemoteControlReceiverProcess(WorkerProcess):
         outPs : list(Pipe) 
             List of output pipes (order does not matter)
         """
-        self.flag = False
+        self.flag = True
         super(RemoteControlReceiverProcess,self).__init__( inPs, outPs)
 
     # ===================================== RUN ==========================================
@@ -60,7 +60,7 @@ class RemoteControlReceiverProcess(WorkerProcess):
         """Initialize the communication socket server.
         """
         self.port       =   12244
-        self.serverIp   =   '192.168.64.1'
+        self.serverIp   =   '192.168.194.1'
 
         self.server_socket = socket.socket(
                                     family  = socket.AF_INET, 
@@ -84,13 +84,8 @@ class RemoteControlReceiverProcess(WorkerProcess):
             #print("5555")
             #print(msg)
             #print("8888")
-            """if msg > 10000:
-                self.flag = True
-            if self.flag ==  True:
-               command = {'action': '1', 'speed':0.0}
-               for outP in self.outPs:
-                   outP.send(command)"""
-
+	    if msg == 1000:
+    		this.flag = False
     def _read_stream(self, outPs):
         """Receive the message and forwards them to the SerialHandlerProcess. 
         
@@ -106,8 +101,9 @@ class RemoteControlReceiverProcess(WorkerProcess):
 
                 bts     =  bts.decode()
                 command =  json.loads(bts)
-                if self.flag:
-                    command = {'action': '1', 'speed': 0.00}
+		if !self.flag:
+
+               #command = {'action': '1', 'speed': 0.00}
                 for outP in outPs:
                     outP.send(command)
 
