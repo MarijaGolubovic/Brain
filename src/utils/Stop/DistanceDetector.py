@@ -117,10 +117,10 @@ class Distance(WorkerProcess):
 					print("Udaljenost je = %.1f cm" % dista)
 					if dista < 20 :
 						block = 1;
-						command = {'action': '1', 'speed': 0.05}
+						command = {'action': '1', 'speed': 0.00}
 					else :
 						if block == 1:
-							command = {'action': '1', 'speed': 0.15}
+							command = {'action': '1', 'speed': 0.09}
 						block = 0;
 					#print(command)
 					"""for outP in self.outPs:

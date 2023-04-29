@@ -54,7 +54,7 @@ class LineDetection(WorkerProcess):
 		
 		self.blue = []
 		
-		#blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna-izbacili", "stop","prvenstvo", "autoput", "kraj_autoputa" ]
+		#blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna", "stop","prvenstvo", "autoput", "kraj_autoputa" ]
 		self.blue.append(parking)
 		self.blue.append(pjesacki)
 		self.blue.append(obavezno_pravo)
@@ -73,13 +73,6 @@ class LineDetection(WorkerProcess):
 		super(LineDetection, self).run()
 		
 	def crop_image(self, img):
-		"""h,w,_ = img.shape
-		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-		img = img[0:round(h/2), round(w/2):w,:]
-		#cv2.imshow("slika", img)
-		#cv2.waitKey(1)
-		print(img.shape)
-		"""
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		h, s, v = cv2.split(hsv)
 		avg = np.average(h)
@@ -93,23 +86,16 @@ class LineDetection(WorkerProcess):
 		imgC = imageIn[0:round(h/3),round(3*w/4):w]
 		CopyImg = imgC.copy()
 		imgC = cv2.cvtColor(imgC, cv2.COLOR_BGR2GRAY)
-		detected_frame = self.FindContures(imgC, CopyImg)
-		
-		#avg = self.crop_image(imgC)
-		#print("*******",avg,"*******")
-		#imgC = cv2.cvtColor(imgC, cv2.COLOR_BGR2GRAY)
+		detected_frame, have_contour, avg = self.FindContures(imgC, CopyImg)
+
 		imgC =cv2.resize(detected_frame, (80, 80), interpolation = cv2.INTER_AREA)
-		#cv2.imshow("daj da radi", imgC)
-		#cv2.waitKey(1)
 		index = -1
 		res = []
 		
 		blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna","stop","prvenstvo", "autoput", "kraj_autoputa" ]
-		group = -1
 		tolerance = 5 
+		if have_contour == True:
 		
-		# group = 0 plavi znakovi, group = 1 crveni znakovi, group = 2 ostali, group = 3 nema znaka
-		if group == -1:
 			for img in self.blue:
 				#cv2.imshow("daj da radi", img)
 				#cv2.waitKey(0)
@@ -120,12 +106,20 @@ class LineDetection(WorkerProcess):
 			index = res.index(max(res))
 			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
 			print(res)
+			if index == 5 and max(res) >  0.15:
+				return blue_signs[index]
 			if(max(res) < 0.20):
 				return 0
+			if index == 6:
+				if 40 - tolerance <= avg <= 40 + tolerance:
+					return blue_signs[index]
+				else:
+					return 0
 			print("$$$$$$$$$", blue_signs[index])
 			return blue_signs[index]
+		else:
+			return 0
 
-		#Signs = ["prvenstvo", "jednosmjerna", "stop", "parking", "autoput", "pjesacki", "kraj_autoputa", "kruzni", "obavezno_pravo"]
 
 		
 	def FindContures(self, imgIn, copy_frame):
@@ -140,6 +134,7 @@ class LineDetection(WorkerProcess):
 		detected_frame = copy_frame.copy()
 		contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		contours_founded = []
+		have_contour = False
 		for contour in contours:  # za svaku konturu
 			center, sizeS, angle = cv2.minAreaRect(contour)  # pronadji pravougaonik minimalne povrsine koji ce obuhvatiti celu konturu
 			width_signs, height_signs = sizeS
@@ -151,6 +146,7 @@ class LineDetection(WorkerProcess):
 				new_height = round(height_signs/2)
 				detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
 				contours_founded.append(contour)
+				have_contour = True
 				#print("ceawhnfuh",contours_founded)
 				t = time.time()
 				"""
@@ -169,7 +165,7 @@ class LineDetection(WorkerProcess):
 			ret = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2GRAY)
 		except Exception as e:
 			print(e)
-		return ret
+		return ret, have_contour, avg
 		
 	def gray(self, image):
 		#print("gray")
