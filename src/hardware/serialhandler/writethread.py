@@ -52,7 +52,7 @@ class WriteThread(Thread):
         self.logFile    =  logFile
         self.messageConverter = MessageConverter()
         
-        command = {'action': '6', 'kp': 0.115, 'ki': 0.99, 'kd': 0.000000000222, 'tf': 0.04}
+        command = {'action': '6', 'kp': 0.115, 'ki': 0.99, 'kd': 0.00000222, 'tf': 0.04}
         command_msg = self.messageConverter.get_command(**command)
         self.serialCom.write(command_msg.encode('ascii'))
         self.logFile.write(command_msg)

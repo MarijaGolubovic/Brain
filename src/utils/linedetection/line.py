@@ -43,7 +43,7 @@ class LineDetection(WorkerProcess):
 		
 		path = "imgs/"
 		stop = cv2.imread(path+"stopcut.png")
-		#jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
+		jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
 		prvenstvo = cv2.imread(path+"prvenstvocut.png")
 		parking = cv2.imread(path+"parkingcut.png")
 		pjesacki = cv2.imread(path+"pjesackicut.png")
@@ -59,6 +59,7 @@ class LineDetection(WorkerProcess):
 		self.blue.append(pjesacki)
 		self.blue.append(obavezno_pravo)
 		self.blue.append(kruzni)
+		self.blue.append(jednosmjerna)
 		self.blue.append(stop)
 		self.blue.append(prvenstvo)
 		self.blue.append(autoput)
@@ -72,13 +73,13 @@ class LineDetection(WorkerProcess):
 		super(LineDetection, self).run()
 		
 	def crop_image(self, img):
-		h,w,_ = img.shape
+		"""h,w,_ = img.shape
 		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 		img = img[0:round(h/2), round(w/2):w,:]
 		#cv2.imshow("slika", img)
 		#cv2.waitKey(1)
 		print(img.shape)
-		
+		"""
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 		h, s, v = cv2.split(hsv)
 		avg = np.average(h)
@@ -90,14 +91,20 @@ class LineDetection(WorkerProcess):
 		h, w, _ = imageIn.shape
 		
 		imgC = imageIn[0:round(h/3),round(3*w/4):w]
-		avg = self.crop_image(imgC)
-		print("*******",avg,"*******")
+		CopyImg = imgC.copy()
 		imgC = cv2.cvtColor(imgC, cv2.COLOR_BGR2GRAY)
-		imgC =cv2.resize(imgC, (80, 80), interpolation = cv2.INTER_AREA)
+		detected_frame = self.FindContures(imgC, CopyImg)
+		
+		#avg = self.crop_image(imgC)
+		#print("*******",avg,"*******")
+		#imgC = cv2.cvtColor(imgC, cv2.COLOR_BGR2GRAY)
+		imgC =cv2.resize(detected_frame, (80, 80), interpolation = cv2.INTER_AREA)
+		#cv2.imshow("daj da radi", imgC)
+		#cv2.waitKey(1)
 		index = -1
 		res = []
 		
-		blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "stop","prvenstvo", "autoput", "kraj_autoputa" ]
+		blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna","stop","prvenstvo", "autoput", "kraj_autoputa" ]
 		group = -1
 		tolerance = 5 
 		
@@ -106,6 +113,7 @@ class LineDetection(WorkerProcess):
 			for img in self.blue:
 				#cv2.imshow("daj da radi", img)
 				#cv2.waitKey(0)
+				img =cv2.resize(img, (80, 80), interpolation = cv2.INTER_AREA)
 				s = ssim(imgC, img[:,:,1])
 				res.append(s)
 			
@@ -120,6 +128,48 @@ class LineDetection(WorkerProcess):
 		#Signs = ["prvenstvo", "jednosmjerna", "stop", "parking", "autoput", "pjesacki", "kraj_autoputa", "kruzni", "obavezno_pravo"]
 
 		
+	def FindContures(self, imgIn, copy_frame):
+		copy_frame = cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)
+		blur = cv2.GaussianBlur(imgIn, (27,27), 0)
+		
+		thresh = cv2.adaptiveThreshold(blur,255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 0)
+		thresh = cv2.bitwise_not(thresh)
+		
+		#cv2.imshow("blur1", thresh)
+		#cv2.waitKey(1)
+		detected_frame = copy_frame.copy()
+		contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		contours_founded = []
+		for contour in contours:  # za svaku konturu
+			center, sizeS, angle = cv2.minAreaRect(contour)  # pronadji pravougaonik minimalne povrsine koji ce obuhvatiti celu konturu
+			width_signs, height_signs = sizeS
+			if width_signs > 25 and width_signs < 125 and height_signs > 35 and height_signs < 125 :#and abs(height_signs-width_signs) < 40:  # uslov da kontura pripada znaku
+				detected_frame = thresh
+				center_height = round(center[0])
+				center_width = round(center[1])
+				new_width = round(width_signs/2)
+				new_height = round(height_signs/2)
+				detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
+				contours_founded.append(contour)
+				#print("ceawhnfuh",contours_founded)
+				t = time.time()
+				"""
+				try:
+					cv2.imwrite("imgs/imgs/img"+str(t)+".png",detected_frame)
+				except Exception as e:
+					print(e)
+				"""
+		cv2.drawContours(copy_frame, contours_founded, -1, (255, 0, 0), 1)
+		avg = self.crop_image(detected_frame)
+		print("~~~~~~~~~~~~~~~",avg,"~~~~~~~~~~~~~~~")
+
+		#cv2.imshow("blur", detected_frame)
+		#cv2.waitKey(1)
+		try:
+			ret = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2GRAY)
+		except Exception as e:
+			print(e)
+		return ret
 		
 	def gray(self, image):
 		#print("gray")
@@ -250,6 +300,9 @@ class LineDetection(WorkerProcess):
 		elif 118 - tolerance < avg < tolerance + 118:
 			print("STOP")
 			return True, 2
+		elif 90 - tolerance < avg < 90 + tolerance:
+			print("AUTOPUT")
+			return True,4
 		else:
 			print("======")
 			return False, 3
@@ -526,7 +579,7 @@ class LineDetection(WorkerProcess):
 		parkiraj_se =  False
 		ne_radi_stop = False
 		mozes_prvenstvo = False
-		msg = {'action': '1', 'speed': 0.05}
+		msg = {'action': '1', 'speed': 0.12}
 		while True:
 			try:
 				if flag == 1:
@@ -554,7 +607,7 @@ class LineDetection(WorkerProcess):
 					"""
 					if isTraficLight == True:
 						if isRedLight == True:
-							msg = {'action': '1', 'speed': 0.20}
+							msg = {'action': '1', 'speed': 0.12}
 							for outP in outPs:
 								outP.send(msg)
 							isRedLight = False
@@ -564,6 +617,7 @@ class LineDetection(WorkerProcess):
 						for outP in outPs:
 							outP.send(msg)
 					else:
+						
 						try:
 							detecSighn = self.compareImage(frame)
 						except Exception as e:
@@ -648,7 +702,7 @@ class LineDetection(WorkerProcess):
 						#	for outP in outPs:
 						#		outP.send(msg)
 						if 0< inParkingTime < 30:
-							msg = {'action': '1', 'speed': 0.09}
+							msg = {'action': '1', 'speed': 0.12}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -673,7 +727,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 86 < inParkingTime < 113 :
-							msg = {'action': '1', 'speed': -0.09}
+							msg = {'action': '1', 'speed': -0.12}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -683,7 +737,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 113 < inParkingTime < 134:
-							msg = {'action': '1', 'speed': -0.09}
+							msg = {'action': '1', 'speed': -0.12}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -698,7 +752,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 135 < inParkingTime < 139:
-							msg = {'action': '1', 'speed': 0.09}
+							msg = {'action': '1', 'speed': 0.12}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -713,7 +767,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 144 < inParkingTime < 160:
-							msg = {'action': '1', 'speed': 0.09}
+							msg = {'action': '1', 'speed': 0.12}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -742,7 +796,7 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 						if 92 < time_p  < 110:
-							msg = {'action': '1', 'speed': 0.09}
+							msg = {'action': '1', 'speed': 0.12}
 							for outP in outPs:
 								outP.send(msg)
 						if  time_p == 110:
@@ -770,7 +824,7 @@ class LineDetection(WorkerProcess):
 								for outP in outPs:
 									outP.send(msg)
 							elif 10 < time < 18: #raskrsnica
-								msg = {'action': '1', 'speed': 0.09}
+								msg = {'action': '1', 'speed': 0.12}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
@@ -786,7 +840,7 @@ class LineDetection(WorkerProcess):
 								isStop = True
 								ne_radi_stop = True
 								sign = -1
-								msg = {'action': '1', 'speed': 0.20}
+								msg = {'action': '1', 'speed': 0.12}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
