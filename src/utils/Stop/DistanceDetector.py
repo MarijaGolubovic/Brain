@@ -104,9 +104,9 @@ class Distance(WorkerProcess):
 			pitch = self.imuMesurment()
 			
 			if pitch < -10:
-				command = {'action': '1', 'speed': 0.11}
+				command = {'action': '1', 'speed': 0.09}
 			elif pitch > 10:
-				command = {'action': '1', 'speed': 0.20}
+				command = {'action': '1', 'speed': 0.09}
 			else:
 				try:
 					dist = np.zeros(4)
@@ -120,7 +120,7 @@ class Distance(WorkerProcess):
 						command = {'action': '1', 'speed': 0.05}
 					else :
 						if block == 1:
-							command = {'action': '1', 'speed': -0.20}
+							command = {'action': '1', 'speed': 0.15}
 						block = 0;
 					#print(command)
 					"""for outP in self.outPs:

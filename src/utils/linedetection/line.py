@@ -43,7 +43,7 @@ class LineDetection(WorkerProcess):
 		
 		path = "imgs/"
 		stop = cv2.imread(path+"stopcut.png")
-		jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
+		#jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
 		prvenstvo = cv2.imread(path+"prvenstvocut.png")
 		parking = cv2.imread(path+"parkingcut.png")
 		pjesacki = cv2.imread(path+"pjesackicut.png")
@@ -53,24 +53,16 @@ class LineDetection(WorkerProcess):
 		obavezno_pravo = cv2.imread(path+"obavezno_pravocut.png")
 		
 		self.blue = []
-		self.red = []
-		self.others = []
 		
-		#blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni"]
+		#blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna-izbacili", "stop","prvenstvo", "autoput", "kraj_autoputa" ]
 		self.blue.append(parking)
 		self.blue.append(pjesacki)
 		self.blue.append(obavezno_pravo)
 		self.blue.append(kruzni)
-		
-		#red_signs = ["jednosmjerna", "stop"]
-		self.red.append(jednosmjerna)
-		self.red.append(stop)
-		
-		
-		#others_signs = ["prvenstvo", "autoput", "kraj_autoputa"]
-		self.others.append(prvenstvo)
-		self.others.append(autoput)
-		self.others.append(kraj_autoputa)
+		self.blue.append(stop)
+		self.blue.append(prvenstvo)
+		self.blue.append(autoput)
+		self.blue.append(kraj_autoputa)
 		
 		
 		super(LineDetection, self).__init__(inPs, outPs, inSh)
@@ -95,10 +87,7 @@ class LineDetection(WorkerProcess):
 		
 	def compareImage(self, imageIn):
 		
-		
-		
 		h, w, _ = imageIn.shape
-		
 		
 		imgC = imageIn[0:round(h/3),round(3*w/4):w]
 		avg = self.crop_image(imgC)
@@ -108,34 +97,12 @@ class LineDetection(WorkerProcess):
 		index = -1
 		res = []
 		
-		blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni"]
-		red_signs = ["jednosmjerna", "stop"]
-		others_signs = ["prvenstvo", "autoput", "kraj_autoputa"]
-		
+		blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "stop","prvenstvo", "autoput", "kraj_autoputa" ]
 		group = -1
 		tolerance = 5 
 		
-		b = 106
-		r = 137
-		black = 100
-		
-		if black - tolerance < avg < tolerance + black:
-			print("NEMA ZNAKA")
-			group = 3
-			return 0
-		else:
-			if b - tolerance < avg < tolerance + b:
-				group = 0
-				print("PLAVI ZNAK")
-			elif r - tolerance < avg < tolerance + r:
-				group = 1
-				print("CRVENI ZNAK")
-			else:
-				group = 2
-				print("OSTALI ZNAKOVI")
-		
 		# group = 0 plavi znakovi, group = 1 crveni znakovi, group = 2 ostali, group = 3 nema znaka
-		if group == 0:
+		if group == -1:
 			for img in self.blue:
 				#cv2.imshow("daj da radi", img)
 				#cv2.waitKey(0)
@@ -145,45 +112,10 @@ class LineDetection(WorkerProcess):
 			index = res.index(max(res))
 			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
 			print(res)
-			if(max(res) < 0.3):
+			if(max(res) < 0.20):
 				return 0
 			print("$$$$$$$$$", blue_signs[index])
-			
-			det_sign = blue_signs[index]
-			index = -1
-			return det_sign
-			
-		elif group == 1:
-			for img in self.red:
-				
-				s = ssim(imgC, img[:,:,1])
-				res.append(s)
-			
-			index = res.index(max(res))
-			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
-			print(res)
-			
-			if(max(res) < 0.3):
-				return 0
-			print("$$$$$$$$$", red_signs[index])
-			det_sign = red_signs[index]
-			index = -1
-			return det_sign
-		elif group == 2:
-			for img in self.others:
-				s = ssim(imgC, img[:,:,1])
-				res.append(s)
-			
-			index = res.index(max(res))
-			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
-			print(res)
-			
-			if(max(res) < 0.3):
-				return 0
-			print("$$$$$$$$$", others_signs[index])
-			det_sign = others_signs[index]
-			index = -1
-			return det_sign
+			return blue_signs[index]
 
 		#Signs = ["prvenstvo", "jednosmjerna", "stop", "parking", "autoput", "pjesacki", "kraj_autoputa", "kruzni", "obavezno_pravo"]
 
@@ -594,7 +526,7 @@ class LineDetection(WorkerProcess):
 		parkiraj_se =  False
 		ne_radi_stop = False
 		mozes_prvenstvo = False
-		msg = {'action': '1', 'speed': 0.12}
+		msg = {'action': '1', 'speed': 0.05}
 		while True:
 			try:
 				if flag == 1:
@@ -716,7 +648,7 @@ class LineDetection(WorkerProcess):
 						#	for outP in outPs:
 						#		outP.send(msg)
 						if 0< inParkingTime < 30:
-							msg = {'action': '1', 'speed': 0.20}
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -741,7 +673,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 86 < inParkingTime < 113 :
-							msg = {'action': '1', 'speed': -0.20}
+							msg = {'action': '1', 'speed': -0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -751,7 +683,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 113 < inParkingTime < 134:
-							msg = {'action': '1', 'speed': -0.20}
+							msg = {'action': '1', 'speed': -0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -766,7 +698,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 135 < inParkingTime < 139:
-							msg = {'action': '1', 'speed': 0.20}
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -781,7 +713,7 @@ class LineDetection(WorkerProcess):
 								outP.send(msg)
 								flag = 0
 						if 144 < inParkingTime < 160:
-							msg = {'action': '1', 'speed': 0.20}
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
@@ -810,7 +742,7 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 						if 92 < time_p  < 110:
-							msg = {'action': '1', 'speed': 0.20}
+							msg = {'action': '1', 'speed': 0.09}
 							for outP in outPs:
 								outP.send(msg)
 						if  time_p == 110:
@@ -838,7 +770,7 @@ class LineDetection(WorkerProcess):
 								for outP in outPs:
 									outP.send(msg)
 							elif 10 < time < 18: #raskrsnica
-								msg = {'action': '1', 'speed': 0.20}
+								msg = {'action': '1', 'speed': 0.09}
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0
