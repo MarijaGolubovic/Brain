@@ -14,10 +14,20 @@ import numpy as np
 class Distance(WorkerProcess):
 	def __init__(self, inPs, outPs):
 		self.pi = pigpio.pi()
-		self.GPIO_TRIGER  = 13
-		self.GPIO_ECHO  = 16
-		self.pi.set_mode(self.GPIO_TRIGER, pigpio.OUTPUT)
-		self.pi.set_mode(self.GPIO_ECHO, pigpio.INPUT)
+		self.GPIO_TRIGER1  = 13
+		self.GPIO_ECHO1  = 16
+		self.pi.set_mode(self.GPIO_TRIGER1, pigpio.OUTPUT)
+		self.pi.set_mode(self.GPIO_ECHO1, pigpio.INPUT)
+		
+		self.GPIO_TRIGER2  = 6
+		self.GPIO_ECHO2  = 5
+		self.pi.set_mode(self.GPIO_TRIGER2, pigpio.OUTPUT)
+		self.pi.set_mode(self.GPIO_ECHO2, pigpio.INPUT)
+		
+		self.GPIO_TRIGER3  = 12
+		self.GPIO_ECHO3  = 18
+		self.pi.set_mode(self.GPIO_TRIGER3, pigpio.OUTPUT)
+		self.pi.set_mode(self.GPIO_ECHO3, pigpio.INPUT)
 		
 		self.SETTINGS_FILE = "RTIMULib"
 		print("Using settings file " + self.SETTINGS_FILE + ".ini")
@@ -42,25 +52,25 @@ class Distance(WorkerProcess):
 		
 		super(Distance, self).__init__(inPs, outPs)
 	
-	def distance(self, dist):
+	def distance(self, dist, GPIO_TRIGER,  GPIO_ECHO):
 		distance = 0
 		
-		self.pi.write(self.GPIO_TRIGER,1)
+		self.pi.write(GPIO_TRIGER,1)
 		time.sleep(0.00001)
-		self.pi.write(self.GPIO_TRIGER,0)
+		self.pi.write(GPIO_TRIGER,0)
 		
 		StartTime = time.time()
 		StopTime = time.time()
 		
 		pom = 0
-		while self.pi.read(self.GPIO_ECHO) == 0:
+		while self.pi.read(GPIO_ECHO) == 0:
 			StartTime = time.time()
 			pom = pom + 1
 			if pom == 25:
 				pom = 0
 				break
 			
-		while self.pi.read(self.GPIO_ECHO) == 1:
+		while self.pi.read(GPIO_ECHO) == 1:
 			StopTime = time.time()
 			
 
@@ -100,18 +110,35 @@ class Distance(WorkerProcess):
 	def _init_mesure(self):
 		block = 0;
 		while True:
+			flagBokDis = True
 			command = self.inPs[0].recv()
+			if command == {'action': '1', 'speed': -0.09} :
+				flagBokDis = False
 			pitch = self.imuMesurment()
 			
 			if pitch < -10:
 				command = {'action': '1', 'speed': 0.09}
 			elif pitch > 10:
-				command = {'action': '1', 'speed': 0.09}
+				command = {'action': '1', 'speed': 0.15}
+			elif flagBokDis: 
+				dist = np.zeros(4)
+				for i in range (0, 4):
+					dist[i] = self.distance(dist, self.GPIO_TRIGER2, self.GPIO_ECHO2)
+				dista = np.average(dist)
+				time.sleep(0.2)
+				print("Udaljenost dva je = %.1f cm" % dista)
+				
+				dist = np.zeros(4)
+				for i in range (0, 4):
+					dist[i] = self.distance(dist, self.GPIO_TRIGER3, self.GPIO_ECHO3)
+				dista = np.average(dist)
+				time.sleep(0.2)
+				print("Udaljenost je tri = %.1f cm" % dista)
 			else:
 				try:
 					dist = np.zeros(4)
 					for i in range (0, 4):
-						dist[i] = self.distance(dist)
+						dist[i] = self.distance(dist, self.GPIO_TRIGER1, self.GPIO_ECHO1)
 					dista = np.average(dist)
 					time.sleep(0.2)
 					print("Udaljenost je = %.1f cm" % dista)

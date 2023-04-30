@@ -83,9 +83,9 @@ class ReadThread(ThreadWithStop):
                         #print(msg)
                         if msg != '':
                             try:
-                                counter += float(msg)
+                                counter = float(msg)
                             except:
-                                counter +=0
+                                counter =0
                         #print(counter)
                         #counter += float(msg)
                         #print(counter)

@@ -36,7 +36,7 @@ class LineDetection(WorkerProcess):
 		self.CarXCord = 0
 		self.CarYcord = 0
 		self.ObstacleID = 0
-		
+		self.encIm = 0
 		self.polEnc = 0
 
 		self.inSh = inSh
@@ -402,7 +402,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.64.149' # PC ip
+		self.serverIp   =  '192.168.64.187' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -424,9 +424,10 @@ class LineDetection(WorkerProcess):
 	def _sendSH(self):
 		while True:
 			#print("11111")
-			msg  = self.inSh[0].recv()
+			self.encIm  = self.inSh[0].recv()
 			try:
-				self.polEnc = -1 * float(msg)
+				self.encIm =  float(msg)
+				print("gjjwedhgiuf",self.polEnc)
 			except:
 				msg = ""
 			#print("555555")
@@ -687,8 +688,10 @@ class LineDetection(WorkerProcess):
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
+					inParking = 1
+					parkiraj_se = False
 					if inParking == 1 and parkiraj_se == False:
-						print("__________________111111111111 ", inParkingTime)
+						"""print("__________________111111111111 ", inParkingTime)
 						if inParkingTime == 0:
 							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
@@ -776,7 +779,18 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 								flag = 0
-						inParkingTime += 1
+						inParkingTime += 1"""
+						self.polEnc += self.encIm
+						print("in parkingggggggggggggggggggggggg")
+						if self.polEnc < 50:
+							msg = {'action': '2', 'steerAngle': 20.0}
+							for outP in outPs:
+								outP.send(msg)
+						if self.polEnc < 1000:
+							print("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", self.polEnc)
+							msg = {'action': '1', 'speed': 0.12}
+							for outP in outPs:
+								outP.send(msg)
 					elif is_priority == True and mozes_prvenstvo == True:
 						self.ObstacleID = 2
 						if time_p < 42:
