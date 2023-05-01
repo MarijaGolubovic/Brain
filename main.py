@@ -1,3 +1,4 @@
+
 # Copyright (c) 2019, Bosch Engineering Center Cluj and BFMC orginazers
 # All rights reserved.
 
@@ -49,22 +50,38 @@ from src.utils.linedetection.line                           import LineDetection
 
 from src.utils.IMU.IMUHandler                               import imu
 from src.utils.Stop.DistanceDetector                        import Distance 
-
+from src.utils.speed.speed                                        import Speed
 # =============================== CONFIG =================================================
-enableStream        =  True
+enableStream        =  False
 enableCameraSpoof   =  False 
 enableRc            =  False
 enableData          =  False
+enableSpeed         =  True
 # =============================== INITIALIZING PROCESSES =================================
 allProcesses = list()
 # rcSer, camSer = Pipe(duplex = false)      camera salje komande autu
 
 # =============================== HARDWARE ===============================================
+if enableSpeed:
+    camStR, camStS = Pipe(duplex = False)
+    rcShR, rcShS = Pipe(duplex = False)
+    shShR, shShS   = Pipe(duplex = False)
+    
+    shProc = SerialHandlerProcess([rcShR],[])
+    allProcesses.append(shProc) 
+   
+    camProc = CameraProcess([], [camStS])
+    allProcesses.append(camProc)
+
+    spdProc = Speed([camStR],[rcShS])
+    allProcesses.append(spdProc) 
+    
 if enableStream:
     camStR, camStS = Pipe(duplex = False)           # camera  ->  line
-    rcShR, rcShS   = Pipe(duplex = False)
+    rcShR, rcShS   = Pipe(duplex = True)
     hcShR, hcShS   = Pipe(duplex = False)
     shShR, shShS   = Pipe(duplex = False)
+    disShR, disShS = Pipe(duplex = False)
     camLineShR, camLineShS = Pipe(duplex = False)       # line    ->  streamer
 
 

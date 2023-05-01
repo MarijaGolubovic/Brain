@@ -1,4 +1,5 @@
 
+
 from skimage.metrics import structural_similarity as ssim
 from src.templates.workerprocess import WorkerProcess 
 
@@ -22,9 +23,9 @@ from multiprocessing import Pipe
 
 #from skimage.metrics import structural_similarity as ssim
 
-class LineDetection(WorkerProcess):
+class Speed(WorkerProcess):
 	flag = 1
-	def __init__(self, inPs, outPs, inSh):
+	def __init__(self, inPs, outPs):
 		self.flag = 1
 		
 		self.enableTraficLightsServer = False
@@ -48,10 +49,8 @@ class LineDetection(WorkerProcess):
 		self.pick_left_line = 0
 		self.ignore_left_line = False
 		
-		self.Dis = 0
 
-		self.inSh = inSh
-		#self.inDis = inDis
+
 		
 		path = "imgs/"
 		stop = cv2.imread(path+"stopcut.png")
@@ -78,11 +77,11 @@ class LineDetection(WorkerProcess):
 		self.blue.append(kraj_autoputa)
 		
 		
-		super(LineDetection, self).__init__(inPs, outPs, inSh)
+		super(Speed, self).__init__(inPs, outPs)
 	
 	def run(self):
 		self._init_socket()
-		super(LineDetection, self).run()
+		super(Speed, self).run()
 		
 	def crop_image(self, img):
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -385,13 +384,7 @@ class LineDetection(WorkerProcess):
 		StreamTh.daemon = True
 		self.threads.append(StreamTh)
 		
-		StreamSh = Thread(name='ReadFromShTread', target = self._sendSH, args = ())
-		StreamSh.daemon = True
-		self.threads.append(StreamSh)
-		
-		StreamDs =Thread(name='ReadFromDistanceTread', target = self._sendDis, args = ())
-		StreamDs.daemon = True
-		self.threads.append(StreamDs)
+
 		
 		if self.enableTraficLightsServer:
 			StreamSerTL = Thread(name = 'TraficLiteThread', target = self._TraficLightServer, args = ())
@@ -437,22 +430,6 @@ class LineDetection(WorkerProcess):
 			self._blocker.set()
 			pass
 
-	def _sendDis(self):
-		while True:
-			self.Dis = self.outPs[0].recv()
-
-	def _sendSH(self):
-		while True:
-			#print("11111")
-			self.encIm  = self.inSh[0].recv()
-			try:
-				self.encIm =  float(msg)
-				print("gjjwedhgiuf",self.polEnc)
-			except:
-				msg = ""
-			#print("555555")
-			#print(self.polEnc)
-			#print("88888")
 	def _Localization(self):
 		beacon = 12345 #12345
 		id = 1
@@ -576,8 +553,8 @@ class LineDetection(WorkerProcess):
 		envhandler.join()
 		
 	def lane_keeping(self):
-		#msg = {'action': '1', 'speed': 0.12}
 		print("++++++++++++++++++++++++++++++U LANE KEEPING")
+		msg = {'action': '1', 'speed': 0.50}
 		if self.lines is None:
 			isDetected = False
 		else:
@@ -652,7 +629,9 @@ class LineDetection(WorkerProcess):
 		ne_radi_stop = False
 		mozes_prvenstvo = False
 		detecSighn = "glupost"
-		msg = {'action': '1', 'speed': 0.12}
+		msg = {'action': '1', 'speed': 0.0}
+		for outP in outPs:
+			outP.send(msg)
 		while True:
 			try:
 				if self.flag == 1:
@@ -667,8 +646,8 @@ class LineDetection(WorkerProcess):
 						print(e)
 					"""
 					#copy_frame =  cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)	
-					height_signs, width_signs, _ = frame.shape
-					h, w, _ = frame.shape
+					#height_signs, width_signs, _ = frame.shape
+					#h, w, _ = frame.shape
 					grey = self.gray(frame)
 					blur = self.gauss(grey)
 					"""
@@ -677,6 +656,7 @@ class LineDetection(WorkerProcess):
 					except:
 						isTraficLight = True
 						print("ITS OKAY")
+					"""
 					"""
 					if isTraficLight == True:
 						if isRedLight == True:
@@ -709,6 +689,7 @@ class LineDetection(WorkerProcess):
 						else:
 							is_sign_clasified = False
 							sign = 3
+					"""
 					"""
 						try:
 							if  is_sign_clasified == False:
@@ -760,126 +741,117 @@ class LineDetection(WorkerProcess):
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
 					self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
-					print("Prije detekcije")
-					print("Sign: ", sign)
-					print(isStop)
-					print(inParking)
-					inParking = 1
-					parkiraj_se = False
+					self.lane_keeping()
+					#print("Prije detekcije")
+					#print("Sign: ", sign)
+					#print(isStop)
+					#print(inParking)
+					#inParking = 1
+					#parkiraj_se = False
 					#tmp = -1
+					"""
 					if inParking == 1 and parkiraj_se == False:
-						print("||||||||||||||||||||||||||||||||||||||||||||", self.Dis)
 						print("__________________111111111111 ", inParkingTime)
-						if self.Dis == 0:
-							if inParkingTime == 0:
-								msg = {'action': '2', 'steerAngle': 0.0}
-								for outP in outPs:
-									outP.send(msg)
-							#if inParkingTime == 1:
-							#	msg = {'action': '2', 'steerAngle': 0.0}
-							#	for outP in outPs:
-							#		outP.send(msg)
-							if 0< inParkingTime < 50:
-								"""msg = {'action': '1', 'speed': 0.12}
-								for outP in outPs:
-									outP.send(msg)
-									flag = 0"""
-								#self.lane_keeping()
-								self.polEnc += self.encIm
-								if self.polEnc < 650:
-									self.lane_keeping()
-								else:
-									msg = {'action': '1', 'speed': 0.0}
-									for outP in outPs:
-										outP.send(msg)
-							if inParkingTime == 50:
-								print("303030303030303030303030303030")
-								msg = {'action': '2', 'steerAngle': 0.0}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							"""if 30 < inParkingTime < 83:
-								msg = {'action': '2', 'steerAngle': 0.0}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0"""
-							if inParkingTime == 51:
-								print("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh")
-								msg = {'action': '1', 'speed': 0.0}
-								for outP in outPs:
-									#print(msg)
-									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 52:
-								msg = {'action': '2', 'steerAngle': 22.0}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if 52 < inParkingTime < 72 :
-								msg = {'action': '1', 'speed': -0.12}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 72:
-								msg = {'action': '2', 'steerAngle': -22.0}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if 72 < inParkingTime < 89:
-								msg = {'action': '1', 'speed': -0.12}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 89:
-								msg = {'action': '1', 'speed': 0.0 }
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 90:
-								msg = {'action': '2', 'steerAngle': 18.0}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if 90 < inParkingTime < 94:
-								msg = {'action': '1', 'speed': 0.12}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if 94 <= inParkingTime < 100:
-								msg = {'action': '1', 'speed': 0.0}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if  inParkingTime == 100:
-								msg = {'action': '2', 'steerAngle': -22.0}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if 100 < inParkingTime < 105:
-								msg = {'action': '1', 'speed': 0.12}
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 105: #154
-								msg = {'action': '2', 'steerAngle': 0.0}
-								inParkingTime = 0
-								inParking = 0
-								parkiraj_se = True
-								mozes_prvenstvo = True
-								for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
-							inParkingTime += 1
-						else:
+						if inParkingTime == 0:
 							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
+								outP.send(msg)
+						#if inParkingTime == 1:
+						#	msg = {'action': '2', 'steerAngle': 0.0}
+						#	for outP in outPs:
+						#		outP.send(msg)
+						if 0< inParkingTime < 50:
 							msg = {'action': '1', 'speed': 0.12}
 							for outP in outPs:
+								outP.send(msg)
+								flag = 0
+							#self.lane_keeping()
+							self.polEnc += self.encIm
+							if self.polEnc < 650:
+								self.lane_keeping()
+							else:
+								msg = {'action': '1', 'speed': 0.0}
+								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-						"""self.polEnc += abs(self.encIm)
+						if inParkingTime == 50:
+							print("303030303030303030303030303030")
+							msg = {'action': '2', 'steerAngle': 0.0}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if 30 < inParkingTime < 83:
+							msg = {'action': '2', 'steerAngle': 0.0}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if inParkingTime == 51:
+							print("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh")
+							msg = {'action': '1', 'speed': 0.0}
+							for outP in outPs:
+								#print(msg)
+								outP.send(msg)
+								self.flag = 0
+						if inParkingTime == 52:
+							msg = {'action': '2', 'steerAngle': 22.0}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if 52 < inParkingTime < 72 :
+							msg = {'action': '1', 'speed': -0.12}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if inParkingTime == 72:
+							msg = {'action': '2', 'steerAngle': -22.0}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if 72 < inParkingTime < 89:
+							msg = {'action': '1', 'speed': -0.12}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if inParkingTime == 89:
+							msg = {'action': '1', 'speed': 0.0 }
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if inParkingTime == 90:
+							msg = {'action': '2', 'steerAngle': 18.0}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if 90 < inParkingTime < 94:
+							msg = {'action': '1', 'speed': 0.12}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if 94 <= inParkingTime < 100:
+							msg = {'action': '1', 'speed': 0.0}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if  inParkingTime == 100:
+							msg = {'action': '2', 'steerAngle': -22.0}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if 100 < inParkingTime < 105:
+							msg = {'action': '1', 'speed': 0.12}
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						if inParkingTime == 105: #154
+							msg = {'action': '2', 'steerAngle': 0.0}
+							inParkingTime = 0
+							inParking = 0
+							parkiraj_se = True
+							mozes_prvenstvo = True
+							for outP in outPs:
+								outP.send(msg)
+								self.flag = 0
+						inParkingTime += 1
+						self.polEnc += abs(self.encIm)
 						print("in parkingggggggggggggggggggggggg", self.polEnc)
 						if self.polEnc < 100:
 							self.lane_keeping()
@@ -951,7 +923,7 @@ class LineDetection(WorkerProcess):
 								flag = 0
 						if 1680 < self.polEnc:
 							self.polEnc = 0"""
-						
+					"""	
 					elif is_priority == True and mozes_prvenstvo == True:
 						self.ObstacleID = 2
 						if time_p < 42:
@@ -1025,7 +997,7 @@ class LineDetection(WorkerProcess):
 						else:
 							print("ELSE")
 							self.lane_keeping()
-							"""if lines is None:
+							if lines is None:
 								isDetected = False
 							else:
 								averaged_lines, isDetected, direction = self.average(copy_frame, lines)					

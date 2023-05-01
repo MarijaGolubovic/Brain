@@ -47,6 +47,8 @@ class Distance(WorkerProcess):
 		self.imu.setAccelEnable(True)
 		self.imu.setCompassEnable(True)
 
+		
+
 		self.poll_interval = self.imu.IMUGetPollInterval()
 		print("Recommended Poll Interval: %dmS\n" % self.poll_interval)
 		
@@ -110,9 +112,10 @@ class Distance(WorkerProcess):
 	def _init_mesure(self):
 		block = 0;
 		while True:
+			pommsg = 0
 			flagBokDis = True
 			command = self.inPs[0].recv()
-			if command == {'action': '1', 'speed': -0.09} :
+			if command == {'action': '1', 'speed': -0.12}:
 				flagBokDis = False
 			pitch = self.imuMesurment()
 			
@@ -120,21 +123,27 @@ class Distance(WorkerProcess):
 				command = {'action': '1', 'speed': 0.09}
 			elif pitch > 10:
 				command = {'action': '1', 'speed': 0.15}
-			elif flagBokDis: 
+			else :
 				dist = np.zeros(4)
 				for i in range (0, 4):
 					dist[i] = self.distance(dist, self.GPIO_TRIGER2, self.GPIO_ECHO2)
-				dista = np.average(dist)
+				dista1 = np.average(dist)
 				time.sleep(0.2)
-				print("Udaljenost dva je = %.1f cm" % dista)
+				print("Udaljenost dva je = %.1f cm" % dista1)
 				
 				dist = np.zeros(4)
 				for i in range (0, 4):
 					dist[i] = self.distance(dist, self.GPIO_TRIGER3, self.GPIO_ECHO3)
-				dista = np.average(dist)
+				dista2 = np.average(dist)
 				time.sleep(0.2)
-				print("Udaljenost je tri = %.1f cm" % dista)
-			else:
+				print("Udaljenost je tri = %.1f cm" % dista2)
+				if dista1 < 10 or dista2 < 10:
+					pommsg = 1
+				else:
+					pommsg = 0
+					
+				
+			
 				try:
 					dist = np.zeros(4)
 					for i in range (0, 4):
@@ -158,5 +167,7 @@ class Distance(WorkerProcess):
 					#print("*****************")
 			for outP in self.outPs:
 				outP.send(command)
+			for outP in self.inPs:
+				outP.send(pommsg)
 	def stop(self):
 		self.pi.stop()
