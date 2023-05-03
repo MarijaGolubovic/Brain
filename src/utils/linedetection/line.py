@@ -1,4 +1,3 @@
-
 from skimage.metrics import structural_similarity as ssim
 from src.templates.workerprocess import WorkerProcess 
 
@@ -85,21 +84,51 @@ class LineDetection(WorkerProcess):
 		super(LineDetection, self).run()
 		
 	def crop_image(self, img):
-		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+		#print("**********USAO **********", img.shape)
+		hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+		#print("**************	NIJE PROSAO**************88*")
 		h, s, v = cv2.split(hsv)
-		avg = np.average(h)
+		avg = np.average(  h)
 		
 		return avg
-		
-	def compareImage(self, imageIn):
-		
-		h, w, _ = imageIn.shape
-		
-		imgC = imageIn[0:round(h/3),round(3*w/4):w]
-		CopyImg = imgC.copy()
-		imgC = cv2.cvtColor(imgC, cv2.COLOR_BGR2GRAY)
-		detected_frame, have_contour, avg = self.FindContures(imgC, CopyImg)
 
+	def whatId(self, sign):
+		if sign == "parking":
+			self.ObstacleID = 3
+		elif sign == "pjesacki":
+			if  self.Dis == 2:
+				self.ObstacleID = 12
+			else:
+				self.ObstacleID = 4
+		elif sign == "obavezno_pravo":
+			self.ObstacleID = 8
+		elif sign == "kruzni":
+                        self.ObstacleID = 7
+		elif sign == "jednosmjerna":
+                        self.ObstacleID = 15
+		elif sign == "stop":
+                        self.ObstacleID = 1
+		elif sign == "prvenstvo":
+                        self.ObstacleID = 2
+		elif sign == "autoput":
+                        self.ObstacleID = 5
+		elif sign == "kraj_autoputa":
+                        self.ObstacleID = 6
+		elif self.Dis == 1:
+			self.ObstacleID = 11
+		elif self.Dis == 2:
+			self.ObstacleID = 12
+	def compareImage(self, imageIn):
+		h, w, _ = imageIn.shape
+		imgC = imageIn[0:round(h/3),round(3*w/4):w, :]
+		CopyImg = imgC.copy()
+		#print("******************OVDJE UDJE*********************")
+		try:
+			imgC = cv2.cvtColor(imgC, cv2.COLOR_RGB2GRAY)
+			#print("******************OVDJE UDJE*********************")
+		except Exception as e:
+			print("CVT COLOR IN COMPARE IMAGE: ", e)
+		detected_frame, have_contour, avg = self.FindContures(imgC, CopyImg)
 		imgC =cv2.resize(detected_frame, (80, 80), interpolation = cv2.INTER_AREA)
 		index = -1
 		res = []
@@ -119,15 +148,18 @@ class LineDetection(WorkerProcess):
 			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
 			print(res)
 			if index == 5 and max(res) >  0.15:
+				self.whatId(blue_signs[index])
 				return blue_signs[index]
 			if(max(res) < 0.20):
 				return 0
 			if index == 6:
 				if 40 - tolerance <= avg <= 40 + tolerance:
+					self.whatId(blue_signs[index])
 					return blue_signs[index]
 				else:
 					return 0
-			print("$$$$$$$$$", blue_signs[index])
+			#print("$$$$$$$$$", blue_signs[index])
+			self.whatId(blue_signs[index])
 			return blue_signs[index]
 		else:
 			return 0
@@ -135,27 +167,35 @@ class LineDetection(WorkerProcess):
 
 		
 	def FindContures(self, imgIn, copy_frame):
-		copy_frame = cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)
+		try:
+			copy_frame = cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)
+			#print("***********PITAMO SE DA LI OVDJE UDJE**********")
+		except Exception as e:
+			print("CVT COLOR IN FIND CONTOURS: ", E)
 		blur = cv2.GaussianBlur(imgIn, (27,27), 0)
 		
 		thresh = cv2.adaptiveThreshold(blur,255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 0)
 		thresh = cv2.bitwise_not(thresh)
-		
+		#print("***********PITAMO SE DA LI OVDJE UDJE**********")
 		#cv2.imshow("blur1", thresh)
 		#cv2.waitKey(1)
 		detected_frame = copy_frame.copy()
 		contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		contours_founded = []
 		have_contour = False
+		#print("***********PITAMO SE DA LI OVDJE UDJE**********")
 		for contour in contours:  # za svaku konturu
 			center, sizeS, angle = cv2.minAreaRect(contour)  # pronadji pravougaonik minimalne povrsine koji ce obuhvatiti celu konturu
 			width_signs, height_signs = sizeS
-			if width_signs > 25 and width_signs < 125 and height_signs > 35 and height_signs < 125 :#and abs(height_signs-width_signs) < 40:  # uslov da kontura pripada znaku
+			aditional_condition = round(height_signs/2)
+			aditional_condition_width = round(width_signs/2)
+			if width_signs > 25 and width_signs < 125 and height_signs > 35 and  height_signs < 125 and center[0] > aditional_condition and center[1] > aditional_condition_width: #and abs(height_signs-width_signs) < 40:  #uslov da kontura pripada znaku
 				detected_frame = thresh
 				center_height = round(center[0])
 				center_width = round(center[1])
-				new_width = round(width_signs/2)
+				new_width = round(width_signs/2) 
 				new_height = round(height_signs/2)
+				#print(center_height, center_width, new_height,new_width, height_signs, width_signs )
 				detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
 				contours_founded.append(contour)
 				have_contour = True
@@ -167,16 +207,20 @@ class LineDetection(WorkerProcess):
 				except Exception as e:
 					print(e)
 				"""
+		#print("***********PITAMO SE DA LI OVDJE UDJE**********")
 		cv2.drawContours(copy_frame, contours_founded, -1, (255, 0, 0), 1)
+		#print("**************8COUNTUR FOUNDID *****************", detected_frame.shape, len(contours_founded))
 		avg = self.crop_image(detected_frame)
-		print("~~~~~~~~~~~~~~~",avg,"~~~~~~~~~~~~~~~")
+		#print("~~~~~~~~~~~~~~~",avg,"~~~~~~~~~~~~~~~")
 
 		#cv2.imshow("blur", detected_frame)
 		#cv2.waitKey(1)
 		try:
-			ret = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2GRAY)
+			#print("******SHAPE OF DETECTED FRAME ******", detected_frame.shape)
+			ret = cv2.cvtColor(detected_frame, cv2.COLOR_RGB2GRAY)
+			#print("***********PITAMO SE DA LI OVDJE UDJE**********")
 		except Exception as e:
-			print(e)
+			print("CVT COLOR IN DETECTED FRAME: ", e)
 		return ret, have_contour, avg
 		
 	def gray(self, image):
@@ -196,8 +240,8 @@ class LineDetection(WorkerProcess):
 	def region(self, image):
 		height, width = image.shape
 		mask = np.zeros_like(image)
-		h_min = int(height/2) - 50
-		h_max = int(height*3/4) 
+		h_min = int(height/2) 
+		h_max = int(height*3/4) + 50
 		w_min = int(width/2)
 		for i in range(h_min, h_max):
 			#print(i)
@@ -226,6 +270,7 @@ class LineDetection(WorkerProcess):
 			x1, y1, x2, y2 = line.reshape(4)
 			parameters = np.polyfit((x1, x2), (y1, y2), 1)
 			slope = parameters[0]
+			#print("ddddddddddddddddddddddddddd", slope)
 			y_int = parameters[1]
 			if slope < 0 :
 				left.append((slope, y_int))
@@ -235,6 +280,7 @@ class LineDetection(WorkerProcess):
 			left_avg = np.average(left, axis=0)
 			slope, y_int = left_avg
 			if abs(slope) > 0.02:
+				#print("soooooooooooope:  ", slope)
 				direction = 2
 				left_line = self.make_points(image, left_avg)
 				final_list.append(left_line)
@@ -262,7 +308,7 @@ class LineDetection(WorkerProcess):
 		
 	def make_points(self, image, average):
 		slope, y_int = average
-		print(slope)
+		#print(slope)
 		#isLeft = 0
 		#if abs(slope) > 0.5:
 		y1 = int(image.shape[0]*0.5)
@@ -419,6 +465,7 @@ class LineDetection(WorkerProcess):
 		"""Initialize the socket client. 
 		"""
 		self.serverIp   =  '192.168.220.149' # PC ip
+		#self.serverIp   =  '192.168.88.78' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -576,8 +623,8 @@ class LineDetection(WorkerProcess):
 		envhandler.join()
 		
 	def lane_keeping(self):
-		#msg = {'action': '1', 'speed': 0.12}
-		print("++++++++++++++++++++++++++++++U LANE KEEPING")
+		msg = {'action': '1', 'speed': 0.12}
+		#print("++++++++++++++++++++++++++++++U LANE KEEPING")
 		if self.lines is None:
 			isDetected = False
 		else:
@@ -616,8 +663,9 @@ class LineDetection(WorkerProcess):
 				self.prev = direction
 			for outP in  self.outPs:
 				outP.send(msg)
-				self.flag = 0
+			self.flag = 0
 		else:
+			print("copy_frame: ",  self.copy_frame.shape)
 			self.lanes = self.copy_frame
 			print("NO lANES")
 			print(self.prev)
@@ -628,11 +676,11 @@ class LineDetection(WorkerProcess):
 				msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
 			for outP in self.outPs:
 				outP.send(msg)
-				self.flag = 0
+			self.flag = 0
 		
 	def _send_thread(self, inP, outPs):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-		flag = 1
+		#flag = 1
 		is_sign_clasified = False
 		isStop = True
 		sign = -1
@@ -692,9 +740,9 @@ class LineDetection(WorkerProcess):
 					else:
 						
 						try:
-							detecSighn = self.compareImage(frame)
+							detecSighn = self.compareImage(self.copy_frame)
 						except Exception as e:
-							print(e)
+							print("***ZNAKOVI: ",e)
 						print("%%%%%%%%%", detecSighn)
 						
 						if detecSighn == "parking":
@@ -759,7 +807,7 @@ class LineDetection(WorkerProcess):
 					"""
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
-					self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
+					self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 100, np.array([]), minLineLength=45, maxLineGap=10)
 					print("Prije detekcije")
 					print("Sign: ", sign)
 					print(isStop)
@@ -775,6 +823,7 @@ class LineDetection(WorkerProcess):
 								msg = {'action': '2', 'steerAngle': 0.0}
 								for outP in outPs:
 									outP.send(msg)
+								self.flag = 0
 							#if inParkingTime == 1:
 							#	msg = {'action': '2', 'steerAngle': 0.0}
 							#	for outP in outPs:
@@ -792,12 +841,13 @@ class LineDetection(WorkerProcess):
 									msg = {'action': '1', 'speed': 0.0}
 									for outP in outPs:
 										outP.send(msg)
+									self.flag = 0
 							if inParkingTime == 50:
 								print("303030303030303030303030303030")
 								msg = {'action': '2', 'steerAngle': 0.0}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
+								self.flag = 0
 							"""if 30 < inParkingTime < 83:
 								msg = {'action': '2', 'steerAngle': 0.0}
 								for outP in outPs:
@@ -809,58 +859,58 @@ class LineDetection(WorkerProcess):
 								for outP in outPs:
 									#print(msg)
 									outP.send(msg)
-									self.flag = 0
+								self.flag = 0
 							if inParkingTime == 52:
 								msg = {'action': '2', 'steerAngle': 22.0}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if 52 < inParkingTime < 72 :
+								self.flag = 0
+							if 52 < inParkingTime < 67 :
 								msg = {'action': '1', 'speed': -0.12}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 72:
+								self.flag = 0
+							if inParkingTime == 67:
 								msg = {'action': '2', 'steerAngle': -22.0}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if 72 < inParkingTime < 89:
+								self.flag = 0
+							if 67 < inParkingTime < 77:
 								msg = {'action': '1', 'speed': -0.12}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 89:
+								self.flag = 0
+							if inParkingTime == 77:
 								msg = {'action': '1', 'speed': 0.0 }
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 90:
+								self.flag = 0
+							if inParkingTime == 78:
 								msg = {'action': '2', 'steerAngle': 18.0}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if 90 < inParkingTime < 94:
+								self.flag = 0
+							if 78 < inParkingTime < 82:
 								msg = {'action': '1', 'speed': 0.12}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if 94 <= inParkingTime < 100:
+								self.flag = 0
+							if 82 <= inParkingTime < 88:
 								msg = {'action': '1', 'speed': 0.0}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if  inParkingTime == 100:
+								self.flag = 0
+							if  inParkingTime == 88:
 								msg = {'action': '2', 'steerAngle': -22.0}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if 100 < inParkingTime < 105:
+								self.flag = 0
+							if 88 < inParkingTime < 93:
 								msg = {'action': '1', 'speed': 0.12}
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
-							if inParkingTime == 105: #154
+								self.flag = 0
+							if inParkingTime == 93: #154
 								msg = {'action': '2', 'steerAngle': 0.0}
 								inParkingTime = 0
 								inParking = 0
@@ -868,17 +918,19 @@ class LineDetection(WorkerProcess):
 								mozes_prvenstvo = True
 								for outP in outPs:
 									outP.send(msg)
-									self.flag = 0
+								self.flag = 0
 							inParkingTime += 1
-						else:
+							#print(msg)
+							self.flag = 0
+						elif self.Dis == 1 and inParkingTime < 35:
 							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
 									outP.send(msg)
 									self.flag = 0
-							msg = {'action': '1', 'speed': 0.12}
-							for outP in outPs:
-									outP.send(msg)
-									self.flag = 0
+							#msg = {'action': '1', 'speed': 0.12}
+							#for outP in outPs:
+							#		outP.send(msg)
+							#		self.flag = 0
 						"""self.polEnc += abs(self.encIm)
 						print("in parkingggggggggggggggggggggggg", self.polEnc)
 						if self.polEnc < 100:

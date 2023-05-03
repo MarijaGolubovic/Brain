@@ -52,11 +52,11 @@ from src.utils.IMU.IMUHandler                               import imu
 from src.utils.Stop.DistanceDetector                        import Distance 
 from src.utils.speed.speed                                        import Speed
 # =============================== CONFIG =================================================
-enableStream        =  False
+enableStream        =  True
 enableCameraSpoof   =  False 
 enableRc            =  False
 enableData          =  False
-enableSpeed         =  True
+enableSpeed         =  False
 # =============================== INITIALIZING PROCESSES =================================
 allProcesses = list()
 # rcSer, camSer = Pipe(duplex = false)      camera salje komande autu

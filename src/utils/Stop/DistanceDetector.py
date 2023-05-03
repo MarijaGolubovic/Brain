@@ -128,14 +128,14 @@ class Distance(WorkerProcess):
 				for i in range (0, 4):
 					dist[i] = self.distance(dist, self.GPIO_TRIGER2, self.GPIO_ECHO2)
 				dista1 = np.average(dist)
-				time.sleep(0.2)
+				#time.sleep(0.2)
 				print("Udaljenost dva je = %.1f cm" % dista1)
 				
 				dist = np.zeros(4)
 				for i in range (0, 4):
 					dist[i] = self.distance(dist, self.GPIO_TRIGER3, self.GPIO_ECHO3)
 				dista2 = np.average(dist)
-				time.sleep(0.2)
+				#time.sleep(0.2)
 				print("Udaljenost je tri = %.1f cm" % dista2)
 				if dista1 < 10 or dista2 < 10:
 					pommsg = 1
@@ -151,8 +151,9 @@ class Distance(WorkerProcess):
 					dista = np.average(dist)
 					time.sleep(0.2)
 					print("Udaljenost je = %.1f cm" % dista)
-					if dista < 20 :
-						block = 1;
+					if dista < 25 :
+						block = 1
+						pommsg = 2
 						command = {'action': '1', 'speed': 0.00}
 					else :
 						if block == 1:
