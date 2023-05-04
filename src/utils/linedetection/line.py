@@ -201,12 +201,10 @@ class LineDetection(WorkerProcess):
 				have_contour = True
 				#print("ceawhnfuh",contours_founded)
 				t = time.time()
-				"""
 				try:
 					cv2.imwrite("imgs/imgs/img"+str(t)+".png",detected_frame)
 				except Exception as e:
 					print(e)
-				"""
 		#print("***********PITAMO SE DA LI OVDJE UDJE**********")
 		cv2.drawContours(copy_frame, contours_founded, -1, (255, 0, 0), 1)
 		#print("**************8COUNTUR FOUNDID *****************", detected_frame.shape, len(contours_founded))
@@ -465,7 +463,7 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.88.78' # PC ip
+		self.serverIp   =  '192.168.220.149' # PC ip
 		#self.serverIp   =  '192.168.1.224' # PC ip
 		self.port       =  2244            # com port
 
@@ -541,13 +539,13 @@ class LineDetection(WorkerProcess):
 		while True:
 		# Clear the screen
 #print("\033c")
-			print("Example program that gets the states of each semaphore from their broadcast messages\n")
+			#print("Example program that gets the states of each semaphore from their broadcast messages\n")
 			# Print each semaphore's data
-			print("S1 color " + colors[Semaphores.s1_state] + ", code " + str(Semaphores.s1_state) + ".")
-			print("S2 color " + colors[Semaphores.s2_state] + ", code " + str(Semaphores.s2_state) + ".")
-			print("S3 color " + colors[Semaphores.s3_state] + ", code " + str(Semaphores.s3_state) + ".")
-			print("S4 color " + colors[Semaphores.s4_state] + ", code " + str(Semaphores.s4_state) + ".")
-			self.TraficLightSr = Semaphores.s1_state
+			#print("S1 color " + colors[Semaphores.s1_state] + ", code " + str(Semaphores.s1_state) + ".")
+			#print("S2 color " + colors[Semaphores.s2_state] + ", code " + str(Semaphores.s2_state) + ".")
+			#print("S3 color " + colors[Semaphores.s3_state] + ", code " + str(Semaphores.s3_state) + ".")
+			#print("S4 color " + colors[Semaphores.s4_state] + ", code " + str(Semaphores.s4_state) + ".")
+			self.TraficLightSr = Semaphores.s3_state
 			#print("cwegyewf " + str(self.TraficLightSr.s1_state))
 			time.sleep(0.5)
 
@@ -672,7 +670,7 @@ class LineDetection(WorkerProcess):
 				time_start = time.time()
 				time_end = time.time()
 				print("----------TIME TIME TIME TIME TIME:", time_end - time_start)
-				while time_end -time_start < 0.70:
+				while time_end -time_start < 0.20:
 					time_end = time.time()
 				print("TIME TIME TIME TIME TIME:", time_end - time_start)
 				iterator = -100
@@ -750,7 +748,7 @@ class LineDetection(WorkerProcess):
 						print("ITS OKAY")
 					"""
 					self.TraficLightSr =2
-					print("SERVER IS:", isTraficLight , "STABNJE SEMAFORA" ,self.TraficLightSr)
+					print("SERVER IS:", isTraficLight , "STANJE SEMAFORA" ,self.TraficLightSr)
 					if isTraficLight == True:
 						if self.TraficLightSr == 0:
 							msg = {'action': '1', 'speed': 0.00}
@@ -853,7 +851,7 @@ class LineDetection(WorkerProcess):
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
-					#inParking = 1
+					inParking = -100
 					parkiraj_se = False
 					#tmp = -1
 					if inParking == 1 and parkiraj_se == False:
