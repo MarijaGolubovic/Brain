@@ -111,51 +111,17 @@ class Distance(WorkerProcess):
 	
 	def _init_mesure(self):
 		block = 0;
-		num_of_ditections = 0
-		com_num = 0
+		
 		while True:
+			num_of_ditections = 0
 			pommsg = 0
 			flagBokDis = True
 			command = self.inPs[0].recv()
 			if command == {'action': '1', 'speed': -0.12}:
 				flagBokDis = False
 			pitch = self.imuMesurment()
-			if num_of_ditections == 10:
-				if 0 <= com_num < 8:
-					com_num = com_num +1
-					command = {'action': '1', 'speed': -0.13}
-				if com_num > 7 and com_num < 11:
-					com_num = com_num +1
-					command = {'action': '1', 'speed': 0.0}
-				if com_num == 11:
-					com_num = com_num + 1
-					command = {'action': '2', 'steerAngle': -22.0}
-				elif com_num > 11 and com_num < 22:
-					com_num = com_num + 1
-					command = {'action': '1', 'speed': 0.13}
-				elif com_num == 22:
-					com_num = com_num + 1
-					command = {'action': '2', 'steerAngle': 0.0}
-				elif com_num > 22 and com_num < 33:
-					com_num = com_num + 1
-					command = {'action': '1', 'speed': 0.13}
-				elif  com_num == 33:
-					com_num = com_num + 1
-					command = {'action': '2', 'steerAngle': 22.0}
-				elif com_num > 33 and com_num < 62:
-					command = {'action': '1', 'speed': 0.13}
-					com_num = com_num + 1
-				elif com_num == 62 :
-					command = {'action': '2', 'steerAngle': -22.0}
-					com_num = com_num + 1
-				elif com_num > 62 and com_num < 67:
-					command = {'action': '1', 'speed': 0.13}
-					com_num = com_num + 1
-				elif com_num == 67:
-					command = {'action': '2', 'steerAngle': 0.0}
-					com_num = 0 
-					num_of_ditections = 0
-			elif pitch < -10:
+			
+			if pitch < -10:
 				command = {'action': '1', 'speed': 0.09}
 			elif pitch > 10:
 				command = {'action': '1', 'speed': 0.15}
@@ -190,13 +156,11 @@ class Distance(WorkerProcess):
 					if dista < 25 :
 						block = 1
 						pommsg = 2
-						num_of_ditections = num_of_ditections + 1
 						command = {'action': '1', 'speed': 0.00}
 					else :
 						if block == 1:
 							command = {'action': '1', 'speed': 0.12}
 						block = 0;
-						num_of_ditections = 0
 					#print(command)
 					"""for outP in self.outPs:
 						outP.send(command)"""

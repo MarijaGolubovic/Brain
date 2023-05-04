@@ -851,7 +851,7 @@ class LineDetection(WorkerProcess):
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
-					inParking = -100
+					inParking = 1
 					parkiraj_se = False
 					#tmp = -1
 					if inParking == 1 and parkiraj_se == False:
