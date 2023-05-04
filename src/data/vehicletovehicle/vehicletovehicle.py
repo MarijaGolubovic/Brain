@@ -69,16 +69,18 @@ class vehicletovehicle(Thread):
         while self.__running:
             try:
                 data,_ = self.sock.recvfrom(4096)
+                print("PUKNE PRVI")
                 data = data.decode("utf-8") 
                 data = json.loads(data)
-
+                print("PUKNE DRUGI")
                 self.ID = int(data['id'])
-
+                print("PUKNE TRECI")
                 #self.timestamp = float(data['timestamp'])
 
+                #self.pos = complex(data['coor'][0], data['coor'][1])
                 self.pos = complex(data['coor'])
-
-                self.ang = complex(data['rot'])
+                #self.ang = complex(data['rot'])
+                print("PUKNE CETIRI")
             except Exception as e:
                 print("Receiving data failed with error: " + str(e))
 

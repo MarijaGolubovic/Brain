@@ -26,13 +26,13 @@ class LineDetection(WorkerProcess):
 	def __init__(self, inPs, outPs, inSh):
 		self.flag = 1
 		
-		self.enableTraficLightsServer = False
+		self.enableTraficLightsServer = True
 		self.enableServerV2V = False
 		self.enableLiveTraficServer = False
 		self.enableLocalizationServer = False
 		self.MyXcord = 0
 		self.Myycord = 0   
-		self.TraficLightSr = None
+		self.TraficLightSr = -1
 		self.CarXCord = 0
 		self.CarYcord = 0
 		self.ObstacleID = 0
@@ -240,7 +240,7 @@ class LineDetection(WorkerProcess):
 	def region(self, image):
 		height, width = image.shape
 		mask = np.zeros_like(image)
-		h_min = int(height/2) 
+		h_min = int(height/2) + 50 
 		h_max = int(height*3/4) + 50
 		w_min = int(width/2)
 		for i in range(h_min, h_max):
@@ -279,6 +279,7 @@ class LineDetection(WorkerProcess):
 		if left != []:
 			left_avg = np.average(left, axis=0)
 			slope, y_int = left_avg
+			print("IDEM DESNO: ", slope)
 			if abs(slope) > 0.02:
 				#print("soooooooooooope:  ", slope)
 				direction = 2
@@ -290,7 +291,7 @@ class LineDetection(WorkerProcess):
 			slope, y_int = right_avg
 			if abs(slope) > 0.5:
 				right_line = self.make_points(image, right_avg)
-				if (right_line[0] < int(image.shape[1]*4/5) and right_line[2] < int(image.shape[1]*4/5)):
+				if (right_line[0] < int(image.shape[1]*3/5) and right_line[2] < int(image.shape[1]*3/5)):#IZMENJENO 3.5.
 					direction = 4
 				if  0.4 < slope < 0.9:
 					direction = 1
@@ -464,8 +465,8 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.220.149' # PC ip
-		#self.serverIp   =  '192.168.88.78' # PC ip
+		self.serverIp   =  '192.168.88.78' # PC ip
+		#self.serverIp   =  '192.168.1.224' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -537,7 +538,7 @@ class LineDetection(WorkerProcess):
 		# Start the listener
 		Semaphores.start()
 		# Wait until 60 seconds passed
-		while (time.time()-start_time < 60):
+		while True:
 		# Clear the screen
 #print("\033c")
 			print("Example program that gets the states of each semaphore from their broadcast messages\n")
@@ -546,7 +547,7 @@ class LineDetection(WorkerProcess):
 			print("S2 color " + colors[Semaphores.s2_state] + ", code " + str(Semaphores.s2_state) + ".")
 			print("S3 color " + colors[Semaphores.s3_state] + ", code " + str(Semaphores.s3_state) + ".")
 			print("S4 color " + colors[Semaphores.s4_state] + ", code " + str(Semaphores.s4_state) + ".")
-			self.TraficLightSr = Semaphores
+			self.TraficLightSr = Semaphores.s1_state
 			#print("cwegyewf " + str(self.TraficLightSr.s1_state))
 			time.sleep(0.5)
 
@@ -563,15 +564,15 @@ class LineDetection(WorkerProcess):
 		vehicle.start()
 		#print("--------------------------")
 		# Wait until 60 seconds passed
-		while (time.time()-start_time < 60):
+		while True:
 			# Clear the screen
 			print("Example program that gets the info of the last car infos\n")
 			# Print each received msg
-			print("ID ", vehicle.ID, ", coor ", vehicle.pos, ", angle ", vehicle.ang)
+			print("ID ", vehicle.ID, ", coor ", vehicle.pos)
 			self.CarXCord = vehicle.pos.real
 			self.CaryCord = vehicle.pos.imag
 			#print("neduwhfviuw")
-			time.sleep(0.5)
+			time.sleep(1)
 		# Stop the listener
 		vehicle.stop()
 			
@@ -623,6 +624,9 @@ class LineDetection(WorkerProcess):
 		envhandler.join()
 		
 	def lane_keeping(self):
+		idi_desno = -1
+		idi_duze = False
+		iterator = 0
 		msg = {'action': '1', 'speed': 0.12}
 		#print("++++++++++++++++++++++++++++++U LANE KEEPING")
 		if self.lines is None:
@@ -632,7 +636,7 @@ class LineDetection(WorkerProcess):
 			averaged_lines, isDetected, direction = self.average(self.copy_frame, self.lines)
 			#print(self.copy_frame.shape)
 			#print(averaged_lines)
-			#print(direction)
+			print("#########################",direction)
 		if isDetected:
 			black_lines = self.display_lines(self.copy_frame, averaged_lines)
 			#print(black_lines)
@@ -640,7 +644,7 @@ class LineDetection(WorkerProcess):
 			print(self.lanes.shape)
 			if self.prev == 4 and self.pick_left_line >= 2 and self.ignore_left_line == False:
 				msg = {'action': '2', 'steerAngle': 18.0}
-				selfprev = -100
+				self.prev = -100
 				self.pick_left_line = 0
 			else:
 				if direction == 1:
@@ -648,8 +652,10 @@ class LineDetection(WorkerProcess):
 					self.ignore_left_line =  True
 				elif direction == 2:
 					if self.isRight == 1:
-						msg = {'action': '2', 'steerAngle': 22.0}
+						msg = {'action': '2', 'steerAngle': 9.0}
 						self.ignore_left_line = False
+						idi_duze = True
+						print("IDI DUZE IDI DUZE IDI DUZE IDI DUZE")
 					else:
 						msg = {'action': '2', 'steerAngle': 0.0}
 				elif direction == 4:
@@ -660,10 +666,26 @@ class LineDetection(WorkerProcess):
 					msg = {'action': '2', 'steerAngle': 0.0}
 					self.ignore_left_line = False
 					self.isRight = 0
-				self.prev = direction
-			for outP in  self.outPs:
-				outP.send(msg)
-			self.flag = 0
+			self.prev = direction
+			if idi_duze == True:
+				print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+				time_start = time.time()
+				time_end = time.time()
+				print("----------TIME TIME TIME TIME TIME:", time_end - time_start)
+				while time_end -time_start < 0.70:
+					time_end = time.time()
+				print("TIME TIME TIME TIME TIME:", time_end - time_start)
+				iterator = -100
+			if idi_duze == False:
+				for outP in  self.outPs:
+					outP.send(msg)
+					self.flag = 0
+			else:
+				if iterator == -100:
+					for outP in self.outPs:
+						outP.send(msg)
+						self.flag = 0
+						idi_duze = False
 		else:
 			print("copy_frame: ",  self.copy_frame.shape)
 			self.lanes = self.copy_frame
@@ -676,7 +698,7 @@ class LineDetection(WorkerProcess):
 				msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
 			for outP in self.outPs:
 				outP.send(msg)
-			self.flag = 0
+				self.flag = 0
 		
 	def _send_thread(self, inP, outPs):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
@@ -687,7 +709,7 @@ class LineDetection(WorkerProcess):
 		time = 0
 		isRight = -1
 		inParking = -1
-		isTraficLight = True
+		isTraficLight = self.enableTraficLightsServer
 		inParkingTime = 0
 		isRedLight = True
 		prev = -100
@@ -699,6 +721,7 @@ class LineDetection(WorkerProcess):
 		parkiraj_se =  False
 		ne_radi_stop = False
 		mozes_prvenstvo = False
+		start = False
 		detecSighn = "glupost"
 		msg = {'action': '1', 'speed': 0.12}
 		while True:
@@ -726,19 +749,37 @@ class LineDetection(WorkerProcess):
 						isTraficLight = True
 						print("ITS OKAY")
 					"""
+					self.TraficLightSr =2
+					print("SERVER IS:", isTraficLight , "STABNJE SEMAFORA" ,self.TraficLightSr)
 					if isTraficLight == True:
-						if isRedLight == True:
+						if self.TraficLightSr == 0:
+							msg = {'action': '1', 'speed': 0.00}
+							for outP in outPs:
+								outP.send(msg)
+						else:
 							msg = {'action': '1', 'speed': 0.12}
 							for outP in outPs:
 								outP.send(msg)
-							isRedLight = False
-					if isTraficLight == False and is_priority == False:
-						isRedLight = True
-						msg = {'action': '1', 'speed': 0.00}
-						for outP in outPs:
-							outP.send(msg)
-					else:
+							isTraficLight = False
+							
 						
+
+						"""
+						if isTraficLight == True:
+							if isRedLight == True:
+								msg = {'action': '1', 'speed': 0.12}
+								for outP in outPs:
+									outP.send(msg)
+								isRedLight = False
+						
+						if isTraficLight == False and is_priority == False:
+							isRedLight = True
+							msg = {'action': '1', 'speed': 0.00}
+							for outP in outPs:
+								outP.send(msg)
+						"""
+					else:
+						isTraficLight = False
 						try:
 							detecSighn = self.compareImage(self.copy_frame)
 						except Exception as e:
@@ -807,12 +848,12 @@ class LineDetection(WorkerProcess):
 					"""
 					edges = cv2.Canny(blur, 50, 150)
 					isolated = self.region(edges)
-					self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 100, np.array([]), minLineLength=45, maxLineGap=10)
+					self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 80, np.array([]), minLineLength=25, maxLineGap=10)
 					print("Prije detekcije")
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
-					inParking = 1
+					#inParking = 1
 					parkiraj_se = False
 					#tmp = -1
 					if inParking == 1 and parkiraj_se == False:
