@@ -43,6 +43,7 @@ class LineDetection(WorkerProcess):
 		self.can_be_parking = True
 		self.TraficLightSrSecond = -1
 		self.can_be_priority = False
+		self.down_hill = False
 		
 		self.lines = None
 		self.lanes = None
@@ -59,27 +60,37 @@ class LineDetection(WorkerProcess):
 		
 		path = "imgs/"
 		stop = cv2.imread(path+"stopcut.png")
-		jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
-		prvenstvo = cv2.imread(path+"prvenstvocut.png")
+		stop1 = cv2.imread(path+"stopcut1.png")
+		stop2 = cv2.imread(path+"stopcut2.png")
+		
 		parking = cv2.imread(path+"parkingcut.png")
-		pjesacki = cv2.imread(path+"pjesackicut.png")
-		autoput = cv2.imread(path+"autoputcut.png")
-		kraj_autoputa = cv2.imread(path+"kraj_autoputacut.png")
-		kruzni = cv2.imread(path+"kruznicut.png")
-		obavezno_pravo = cv2.imread(path+"obavezno_pravocut.png")
+		parking1 = cv2.imread(path+"parkingcut1.png")
+		parking2 = cv2.imread(path+"parkingcut2.png")
+		
+		#jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
+		#prvenstvo = cv2.imread(path+"prvenstvocut.png")
+		#pjesacki = cv2.imread(path+"pjesackicut.png")
+		#autoput = cv2.imread(path+"autoputcut.png")
+		#kraj_autoputa = cv2.imread(path+"kraj_autoputacut.png")
+		#kruzni = cv2.imread(path+"kruznicut.png")
+		#obavezno_pravo = cv2.imread(path+"obavezno_pravocut.png")
 		
 		self.blue = []
 		
 		#blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna", "stop","prvenstvo", "autoput", "kraj_autoputa" ]
 		self.blue.append(parking)
-		self.blue.append(pjesacki)
-		self.blue.append(obavezno_pravo)
-		self.blue.append(kruzni)
-		self.blue.append(jednosmjerna)
+		self.blue.append(parking1)
+		self.blue.append(parking2)
+		
 		self.blue.append(stop)
-		self.blue.append(prvenstvo)
-		self.blue.append(autoput)
-		self.blue.append(kraj_autoputa)
+		self.blue.append(stop1)
+		self.blue.append(stop2)
+		
+		#self.blue.append(kruzni)
+		#self.blue.append(jednosmjerna)
+		#self.blue.append(prvenstvo)
+		#self.blue.append(autoput)
+		#self.blue.append(kraj_autoputa)
 		
 		
 		super(LineDetection, self).__init__(inPs, outPs, inSh)
@@ -135,10 +146,12 @@ class LineDetection(WorkerProcess):
 			print("CVT COLOR IN COMPARE IMAGE: ", e)
 		detected_frame, have_contour, avg = self.FindContures(imgC, CopyImg)
 		imgC =cv2.resize(detected_frame, (80, 80), interpolation = cv2.INTER_AREA)
+		print("============ AVG ============", avg)
+		
 		index = -1
 		res = []
 		
-		blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna","stop","prvenstvo", "autoput", "kraj_autoputa" ]
+		blue_signs = ["parking", "parking", "parking", "stop", "stop", "stop"]
 		tolerance = 5 
 		if have_contour == True:
 		
@@ -152,8 +165,8 @@ class LineDetection(WorkerProcess):
 			index = res.index(max(res))
 			print("$$$$$$$$$ ", index, " $$$$$$$$$$$$$$$")
 			print(res)
-			if index == 5 and max(res) >  0.15:
-				self.whatId(blue_signs[index])
+			"""if index == 5 and max(res) >  0.15:
+				#self.whatId(blue_signs[index])
 				return blue_signs[index]
 			if(max(res) < 0.20):
 				return 0
@@ -163,9 +176,24 @@ class LineDetection(WorkerProcess):
 					return blue_signs[index]
 				else:
 					return 0
+			"""
+			
+			if(max(res) < 0.15):
+				return 0 
+				
+			if index == 3 or index == 4 or index == 5:
+				if 115 < avg < 135:
+					return blue_signs[5]
+				else:
+					return 0
+			else:
+				if 145 < avg < 175:
+					return blue_signs[1]
+				else:
+					return 0
 			#print("$$$$$$$$$", blue_signs[index])
-			self.whatId(blue_signs[index])
-			return blue_signs[index]
+			#self.whatId(blue_signs[index])
+			
 		else:
 			return 0
 
@@ -204,12 +232,15 @@ class LineDetection(WorkerProcess):
 				detected_frame = copy_frame[center_width-new_width:new_width + center_width, center_height-new_height:center_height + new_height]
 				contours_founded.append(contour)
 				have_contour = True
+				#cv2.imshow("slika", detected_frame)
+				#cv2.waitKey(1)
 				#print("ceawhnfuh",contours_founded)
 				t = time.time()
-				try:
+				"""try:
 					cv2.imwrite("imgs/imgs/img"+str(t)+".png",detected_frame)
 				except Exception as e:
 					print(e)
+				"""
 		#print("***********PITAMO SE DA LI OVDJE UDJE**********")
 		cv2.drawContours(copy_frame, contours_founded, -1, (255, 0, 0), 1)
 		#print("**************8COUNTUR FOUNDID *****************", detected_frame.shape, len(contours_founded))
@@ -468,8 +499,9 @@ class LineDetection(WorkerProcess):
 	def _init_socket(self):
 		"""Initialize the socket client. 
 		"""
-		self.serverIp   =  '192.168.220.149' # PC ip
+		#self.serverIp   =  '192.168.88.78' # PC ip
 		#self.serverIp   =  '192.168.1.224' # PC ip
+		self.serverIp   =  '192.168.220.149' # PC ip
 		self.port       =  2244            # com port
 
 		self.client_socket = socket.socket()
@@ -494,7 +526,7 @@ class LineDetection(WorkerProcess):
 			if self.Dis == 3:
 				self.can_be_parking = True
 			elif self.Dis == 4:
-				self.can_be_priority = True
+				self.down_hill = True
 
 	def _sendSH(self):
 		while True:
@@ -633,8 +665,11 @@ class LineDetection(WorkerProcess):
 		
 	def lane_keeping(self):
 		idi_desno = -1
+		isao_levo = -1
 		idi_duze = False
+		idi_duze_lijevo = False
 		iterator = 0
+		lijevo = 0
 		msg = {'action': '1', 'speed': 0.12}
 		#print("++++++++++++++++++++++++++++++U LANE KEEPING")
 		if self.lines is None:
@@ -650,13 +685,15 @@ class LineDetection(WorkerProcess):
 			#print(black_lines)
 			self.lanes = cv2.addWeighted(self.copy_frame, 0.8, black_lines, 1, 1)
 			print(self.lanes.shape)
-			if self.prev == 4 and self.pick_left_line >= 2 and self.ignore_left_line == False:
+			if self.prev == 4 and self.pick_left_line >= 3 and self.ignore_left_line == False:
 				msg = {'action': '2', 'steerAngle': 18.0}
 				self.prev = -100
 				self.pick_left_line = 0
 			else:
 				if direction == 1:
-					msg = {'action': '2', 'steerAngle': -22.0}
+					msg = {'action': '2', 'steerAngle': -15.0}
+					isao_levo = 1
+					idi_duze_lijevo = True
 					self.ignore_left_line =  True
 				elif direction == 2:
 					if self.isRight == 1:
@@ -667,9 +704,22 @@ class LineDetection(WorkerProcess):
 					else:
 						msg = {'action': '2', 'steerAngle': 0.0}
 				elif direction == 4:
-					if self.pick_left_line < 2:
-						msg = {'action': '2', 'steerAngle': -18.0}
-						self.pick_left_line = self.pick_left_line + 1
+					if isao_levo == 1:
+						print("PROBLEEEEEEEEEEEEEEEEM")
+						msg = {'action': '2', 'steerAngle': 22.0}
+						#for outP in self.outPs:
+						#	outP.send(msg)
+						#time_start = time.time()
+						#time_end = time.time()
+						#print("----------TIME TIME TIME TIME TIME:", time_end - time_start)
+						#while time_end -time_start < 0.20:
+						#	time_end = time.time()
+						isao_levo = 0
+						#self.flag = 0 
+					else:
+						if self.pick_left_line < 3:
+							msg = {'action': '2', 'steerAngle': -18.0}
+							self.pick_left_line = self.pick_left_line + 1
 				else:
 					msg = {'action': '2', 'steerAngle': 0.0}
 					self.ignore_left_line = False
@@ -684,10 +734,24 @@ class LineDetection(WorkerProcess):
 					time_end = time.time()
 				print("TIME TIME TIME TIME TIME:", time_end - time_start)
 				iterator = -100
+			if idi_duze_lijevo == True:
+				time_start = time.time()
+				time_end = time.time()
+                            	#print("----------TIME TIME TIME TIME TIME:", time_end - time_start)
+				while time_end -time_start < 0.20:
+					time_end = time.time()
+                                #print("TIME TIME TIME TIME TIME:", time_end - time_start)
+				lijevo = -100
 			if idi_duze == False:
 				for outP in  self.outPs:
 					outP.send(msg)
 					self.flag = 0
+			elif idi_duze_lijevo == True:
+				if lijevo == -100:
+					for outP in  self.outPs:
+						outP.send(msg)
+						self.flag = 0
+						lijevo = False
 			else:
 				if iterator == -100:
 					for outP in self.outPs:
@@ -704,6 +768,8 @@ class LineDetection(WorkerProcess):
 				self.isRight = 1
 			elif self.prev == 1:
 				msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
+			else:
+				msg = {'action': '2', 'steerAngle': 20.0}
 			for outP in self.outPs:
 				outP.send(msg)
 				self.flag = 0
@@ -731,6 +797,7 @@ class LineDetection(WorkerProcess):
 		ne_radi_stop = False
 		mozes_prvenstvo = False
 		start = False
+		ramp_pass = False
 		detecSighn = "glupost"
 		msg = {'action': '1', 'speed': 0.12}
 		#for outP in outPs:
@@ -865,9 +932,10 @@ class LineDetection(WorkerProcess):
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
-					inParking = -100
+					#inParking = -100
 					#parkiraj_se = False #ovim se bl;okira DA NE UPADA VISE PUTA U PARKING
 					#tmp = -1
+					is_priority = False
 					if inParking == 1 and parkiraj_se == False and self.can_be_parking == True:
 						print("||||||||||||||||||||||||||||||||||||||||||||", self.Dis)
 						print("__________________111111111111 ", inParkingTime)
@@ -989,79 +1057,7 @@ class LineDetection(WorkerProcess):
 							#		self.flag = 0
 						else:
 							self.Dis = 0
-						"""self.polEnc += abs(self.encIm)
-						print("in parkingggggggggggggggggggggggg", self.polEnc)
-						if self.polEnc < 100:
-							self.lane_keeping()
-						if 100 < self.polEnc < 130:
-							tmp = self.polEnc
-							msg = {'action': '1', 'speed': 0.0}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if self.polEnc == tmp:
-							msg = {'action': '2', 'steerAngle': 22.0}
-							tmp -= 1
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if tmp < self.polEnc  < tmp + 100 :
-							msg = {'action': '1', 'speed': -0.12}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if 260 < self.polEnc < 290:
-							msg = {'action': '2', 'steerAngle': -22.0}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if 1190 < self.polEnc < 1290:
-							msg = {'action': '1', 'speed': -0.12}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if 1290 < self.polEnc < 1320:
-							msg = {'action': '1', 'speed': 0.0 }
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if 1320 < self.polEnc < 1350:
-							msg = {'action': '2', 'steerAngle': 18.0}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if 1350 < self.polEnc < 1450:
-							msg = {'action': '1', 'speed': 0.12}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if 1450 <= self.polEnc < 1550:
-							msg = {'action': '1', 'speed': 0.0}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if  1550 < self.polEnc < 1580:
-							msg = {'action': '2', 'steerAngle': -22.0}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if 1580 < inParkingTime < 1680:
-							msg = {'action': '1', 'speed': 0.12}
-							for outP in outPs:
-								outP.send(msg)
-								self.flag = 0
-						if inParkingTime == 160: #154
-							msg = {'action': '2', 'steerAngle': 0.0}
-							inParkingTime = 0
-							inParking = 0
-							parkiraj_se = True
-							mozes_prvenstvo = True
-							for outP in outPs:
-								outP.send(msg)
-								flag = 0
-						if 1680 < self.polEnc:
-							self.polEnc = 0"""
-						
+
 					elif is_priority == True and mozes_prvenstvo == True and self.can_be_priority == True:
 						self.ObstacleID = 2
 						if time_p < 42:
@@ -1095,11 +1091,48 @@ class LineDetection(WorkerProcess):
 						self.flag = 0
 						time_p += 1
 						print("########: ",time_p)
+					
+					elif finish == True:
+						print("!!!!!!IN FINISH: ", self.polEnc)
+						self.polEnc += self.encIm
+						if self.polEnc < 2600:
+							self.lane_keeping()
+						elif 2600 <= self.polEnc < 3100:
+							msg = {'action': '2', "steerAngle": -22.0}
+							for outP in outPs:
+								outP.send(msg)
+							self.flag = 0
+						elif 3100 <= self.polEnc < 3300:
+							self.lane_keeping()
+						elif 3300 <= self.polEnc < 3400:
+							if self.TraficLightSrSecond == 0:
+								msg = {'action': '1', 'speed': 0.0}
+								for outP in outPs:
+									#print("salje")
+									outP.send(msg)
+								self.flag = 0
+							else:
+								msg = {'action': '1', 'speed': 0.12}
+								for outP in outPs:
+									#print("salje")
+									outP.send(msg)
+								self.lane_keeping()
+						elif 3400 <= self.polEnc < 6400:
+							self.lane_keeping()
+						elif 6400 <= self.polEnc < 7100:
+							msg = {'action': '2', "steerAngle": -22.0}
+							for outP in outPs:
+								outP.send(msg)
+							self.flag = 0
+						else:
+							self.lane_keeping()
+							finish = False
+					
 					else:
 						if  sign == 2 :
 							isStop = False
 							print("************************")
-						if isStop == False and ne_radi_stop == False:
+						if isStop == False: # and ne_radi_stop == False:
 							self.ObstacleID = 1
 							time = time + 1
 							print("Time: ", time)
@@ -1142,15 +1175,10 @@ class LineDetection(WorkerProcess):
 							self.flag = 0
 						elif sign == 0:
 							is_priority = True
-						elif finish == True:
-							self.polEnc += self.encIm
-							if self.polEnc < 1500:
-								self.lane_keeping()
-							else:
-								is_priority = True #FORSIRAJ LEVO
-								mozes_prvenstvo = True	
-								self.can_be_priority = True
-								finish = False
+						elif self.down_hill == True and self.Dis == 0:
+							self.polEnc = 0
+							self.down_hill = False
+							finish = True
 						else:
 							print("ELSE")
 							self.lane_keeping()
@@ -1200,6 +1228,8 @@ class LineDetection(WorkerProcess):
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0"""
+						
+						
 				else:
 					stamps, frame = inP.recv()
 					#lanes = frame
