@@ -25,7 +25,7 @@ from multiprocessing import Pipe
 
 class Speed(WorkerProcess):
 	flag = 1
-	def __init__(self, inPs, outPs):
+	def __init__(self, inPs, outPs, inSh):
 		self.flag = 1
 		
 		self.enableTraficLightsServer = False
@@ -40,6 +40,7 @@ class Speed(WorkerProcess):
 		self.ObstacleID = 0
 		self.encIm = 0
 		self.polEnc = 0
+		self.Dis = 0
 		
 		self.lines = None
 		self.lanes = None
@@ -49,35 +50,14 @@ class Speed(WorkerProcess):
 		self.pick_left_line = 0
 		self.ignore_left_line = False
 		
+		self.Flag = True
+		
+		self.inSh = inSh
 
+		
 
 		
-		path = "imgs/"
-		stop = cv2.imread(path+"stopcut.png")
-		jednosmjerna = cv2.imread(path+"jednosmjernacut.png")
-		prvenstvo = cv2.imread(path+"prvenstvocut.png")
-		parking = cv2.imread(path+"parkingcut.png")
-		pjesacki = cv2.imread(path+"pjesackicut.png")
-		autoput = cv2.imread(path+"autoputcut.png")
-		kraj_autoputa = cv2.imread(path+"kraj_autoputacut.png")
-		kruzni = cv2.imread(path+"kruznicut.png")
-		obavezno_pravo = cv2.imread(path+"obavezno_pravocut.png")
-		
-		self.blue = []
-		
-		#blue_signs = ["parking", "pjesacki", "obavezno_pravo", "kruzni", "jednosmjerna", "stop","prvenstvo", "autoput", "kraj_autoputa" ]
-		self.blue.append(parking)
-		self.blue.append(pjesacki)
-		self.blue.append(obavezno_pravo)
-		self.blue.append(kruzni)
-		self.blue.append(jednosmjerna)
-		self.blue.append(stop)
-		self.blue.append(prvenstvo)
-		self.blue.append(autoput)
-		self.blue.append(kraj_autoputa)
-		
-		
-		super(Speed, self).__init__(inPs, outPs)
+		super(Speed, self).__init__(inPs, outPs, inSh)
 	
 	def run(self):
 		self._init_socket()
@@ -254,27 +234,13 @@ class Speed(WorkerProcess):
 		StreamTh.daemon = True
 		self.threads.append(StreamTh)
 		
-
+		EncTh = Thread(name='encoderThread', target = self._send_enc, args= ())
+		EncTh.daemon = True
+		self.threads.append(EncTh)
 		
-		if self.enableTraficLightsServer:
-			StreamSerTL = Thread(name = 'TraficLiteThread', target = self._TraficLightServer, args = ())
-			StreamSerTL.daemon = True
-			self.threads.append(StreamSerTL)
-			
-		if self.enableServerV2V:
-			StreamSerVl = Thread(name = 'Viacle2ViacleThread', target = self._ViacleToViacle, args = ())
-			StreamSerVl.daemon = True
-			self.threads.append(StreamSerVl)
-			
-		if self.enableLiveTraficServer:
-			StreamSerLT = Thread(name = 'LiveTraficThread', target = self._LiveTrafic, args = ())
-			StreamSerLT.daemon = True
-			self.threads.append(StreamSerLT)
-		
-		if self.enableLocalizationServer:
-			StreamserLoc = Thread(name = 'LocalizationThread', target = self._Localization, args = ())
-			StreamserLoc.daemon = True
-			self.threads.append(StreamserLoc)
+		MsgFrSe = Thread(name='msgFromSensors', target = self._rec_msg, args= ())
+		MsgFrSe.daemon = True
+		self.threads.append(MsgFrSe)
 		
 		
 	 # ===================================== INIT SOCKET ==================================
@@ -301,32 +267,7 @@ class Speed(WorkerProcess):
 			pass
 
 	
-	
-	def _TraficLightServer(self):
-		colors = ['red','yellow','green']   
-		# Get time stamp when starting tester
-		start_time = time.time()
-		# Create listener object
-		Semaphores = trafficlights.trafficlights()
-		# Start the listener
-		Semaphores.start()
-		# Wait until 60 seconds passed
-		while (time.time()-start_time < 60):
-		# Clear the screen
-#print("\033c")
-			print("Example program that gets the states of each semaphore from their broadcast messages\n")
-			# Print each semaphore's data
-			print("S1 color " + colors[Semaphores.s1_state] + ", code " + str(Semaphores.s1_state) + ".")
-			print("S2 color " + colors[Semaphores.s2_state] + ", code " + str(Semaphores.s2_state) + ".")
-			print("S3 color " + colors[Semaphores.s3_state] + ", code " + str(Semaphores.s3_state) + ".")
-			print("S4 color " + colors[Semaphores.s4_state] + ", code " + str(Semaphores.s4_state) + ".")
-			self.TraficLightSr = Semaphores
-			#print("cwegyewf " + str(self.TraficLightSr.s1_state))
-			time.sleep(0.5)
 
-		Semaphores.stop()
-		
-	
 		
 	def lane_keeping(self):
 		print("++++++++++++++++++++++++++++++U LANE KEEPING")
@@ -379,9 +320,27 @@ class Speed(WorkerProcess):
 				self.isRight = 1
 			elif self.prev == 1:
 				msg = {'action': '2', 'steerAngle': -22.0} #AKO JE SKRETAO DESNO I NE VIDI LINIJU, NASTAVI DA SKRECES DESNO DOK NE VIDIS LINIJU
+			else:
+				msg = {'action': '2', 'steerAngle': 20.0}
 			for outP in self.outPs:
 				outP.send(msg)
 				self.flag = 0
+		
+	def _rec_msg(self):
+		while True:
+			while True:
+				self.Dis = self.outPs[0].recv()
+				if self.Dis == 1:
+					self.Flag = False
+	
+	def _send_enc(self):
+		while True:
+			self.encIm  = self.inSh[0].recv()
+			try:
+				self.encIm =  float(msg)
+				#print("gjjwedhgiuf",self.polEnc)
+			except:
+				msg = ""
 		
 	def _send_thread(self, inP, outPs):
 		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
@@ -405,120 +364,97 @@ class Speed(WorkerProcess):
 		ne_radi_stop = False
 		mozes_prvenstvo = False
 		detecSighn = "glupost"
+		
 		num_frame = 0
-		msg = {'action': '1', 'speed': 0.30}
+		msg = {'action': '1', 'speed': 0.35}
 		for outP in outPs:
 			outP.send(msg)
+		encLenght = 0
+		Flag_pom = True
 		while True:
 			try:
+				msg = {'action': '1', 'speed': 0.35}
+				for outP in outPs:
+					outP.send(msg)
 				if self.flag == 1:
+					
 					#msg = {"action": '1', 'speed': 0.09}
 					print("!!!!!!!!!!!!!!!!!!!!!!!:  ", num_frame)
 					stamps, frame = inP.recv()
 					self.lanes = frame
 					self.copy_frame = frame.copy()
-					num_frame = num_frame + 1
+					
 					#copy_frame =  cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)	
 					#height_signs, width_signs, _ = frame.shape
 					#h, w, _ = frame.shape
-					if num_frame < 100: # OD STARTA DO ISKLJUCENJA DO KRIVUDAVE
+					if self.Flag == True:
+						if Flag_pom == True:
+							encLenght = self.encIm + encLenght
+							if encLenght  < 200:
+								msg = {'action': '1', 'speed': 0.35}
+								for outP in self.outPs:
+									outP.send(msg)
+								self.flag = 0
+							elif 200 <= encLenght < 300:
+								msg = {'action': '2', 'steerAngle': 22.0}
+								for outP in self.outPs:
+									outP.send(msg)
+								self.flag = 0
+								encLenght = 0
+								Flag_pom = False
+						else :
+							grey = self.gray(frame)
+							blur = self.gauss(grey)
+					
+							edges = cv2.Canny(blur, 50, 150)
+							isolated = self.region(edges)
+							self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
+							self.lane_keeping()
+					elif self.Flag == False and self.Dis == 0:
+						num_frame = num_frame + 1
+						encLenght = self.encIm + encLenght
+						print("encLenght:  ", encLenght)
 						grey = self.gray(frame)
 						blur = self.gauss(grey)
-					
 						edges = cv2.Canny(blur, 50, 150)
 						isolated = self.region(edges)
 						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
-						self.lane_keeping()
-					elif num_frame == 100: # DA UDJE NA KRIVUDAVI DEO
-						msg = {'action': '2', 'steerAngle': 0.0}
-						for outP in self.outPs:
-                        				outP.send(msg)
-                        		
-					elif num_frame < 105 and num_frame > 100:
-						msg = {'action': '1', 'speed': 0.30}
-						for outP in self.outPs:
-		        				outP.send(msg)
-					elif num_frame > 104 and num_frame < 250 : # OD KRIVUDAVI DEO
-						grey = self.gray(frame)
-						blur = self.gauss(grey)
-						edges = cv2.Canny(blur, 50, 150)
-						solated = self.region(edges)
-						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
-						self.lane_keeping()
-					elif num_frame > 249 and num_frame < 255: # OD KRIVUDAVOG DO KRUZNOG
-						msg = {'action': '1', 'speed': 0.30}
-						for outP in self.outPs:
-                        				outP.send(msg)
-					elif num_frame == 255:
-						msg = {'action': '2', 'steerAngle': -22.0}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame > 255 and num_frame < 258:
-						msg = {'action': '1', 'speed': 0.30}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame == 258:
-						msg = {'action': '2', 'steerAngle': 0.0}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame > 258 and num_frame > 260:
-						msg = {'action': '1', 'speed': 0.30}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame > 259 and num_frame > 265: # DEO KRUZNOG TOKA
-						grey = self.gray(frame)
-						blur = self.gauss(grey)
-					
-						edges = cv2.Canny(blur, 50, 150)
-						isolated = self.region(edges)
-						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
-						self.lane_keeping()
-					elif num_frame == 265:
-						msg = {'action': '2', 'steerAngle': -22.0}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame > 265 and num_frame < 270:
-						msg = {'action': '1', 'speed': 0.30}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame > 269 and num_frame < 410:
-						grey = self.gray(frame)
-						blur = self.gauss(grey)
-					
-						edges = cv2.Canny(blur, 50, 150)
-						isolated = self.region(edges)
-						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
-						self.lane_keeping()
-					elif num_frame == 410:
-						msg = {'action': '2', 'steerAngle': -22.0}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame > 410 and num_frame < 415:
-						msg = {'action': '1', 'speed': 0.30}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame == 415:
-						msg = {'action': '2', 'steerAngle': 0.0}
-						for outP in self.outPs:
-							outP.send(msg)
-					elif num_frame > 415 and num_frame < 420:
-						msg = {'action': '1', 'speed': 0.30}
-						for outP in self.outPs:
-                        				outP.send(msg)
-					elif num_frame > 420 and num_frame < 435:
-						grey = self.gray(frame)
-						blur = self.gauss(grey)
-					
-						edges = cv2.Canny(blur, 50, 150)
-						isolated = self.region(edges)
-						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
-						self.lane_keeping()
-					elif num_frame == 435:
-						msg = {'action': '1', 'speed': 0.00}
-						for outP in self.outPs:
-							outP.send(msg)
+						if num_frame == 1: 
+							msg = {'action': '1', 'speed': 0.0}
+							for outP in self.outPs:
+								outP.send(msg)
+							self.flag = 0
+						elif num_frame == 2:
+							msg = {'action': '1', 'speed': 0.35}
+							for outP in self.outPs:
+								outP.send(msg)
+							self.flag = 0
+						else:
+							if encLenght < 700:
+								self.lane_keeping()
+							elif 700 <= encLenght < 1150:
+								msg = {'action': '2', 'steerAngle': -22.0}
+								for outP in self.outPs:
+									outP.send(msg)
+								self.flag = 0
+							elif 1150 <= encLenght < 2600:
+								msg = {'action': '2', 'steerAngle': 0.0}
+								for outP in self.outPs:
+									outP.send(msg)
+								self.flag = 0
+							elif 2600 <= encLenght < 3700:
+								self.lane_keeping()
+							else:
+								msg = {'action': '1', 'speed': 0.0}
+								for outP in self.outPs:
+									outP.send(msg)
+								self.flag = 0
 					else:
-						print("MISSING FRAME AND UNSORTED: ", num_frame)
+						msg = {'action': '1', 'speed': 0.35}
+						for outP in self.outPs:
+							outP.send(msg)
+						self.flag = 0
+							
 				else:
 					stamps, frame = inP.recv()
 					#lanes = frame
