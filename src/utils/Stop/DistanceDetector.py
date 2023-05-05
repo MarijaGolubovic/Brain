@@ -170,11 +170,12 @@ class Distance(WorkerProcess):
 				else:
 					print("Ne definisano stanje je ", com_num)
 			
-			elif pitch < -10:
-				command = {'action': '1', 'speed': 0.09}
-				pommsg = 4
-			elif pitch > 10:
+			elif pitch < -11:
 				command = {'action': '1', 'speed': 0.15}
+				
+			elif pitch > 11:
+				command = {'action': '1', 'speed': 0.12}
+				pommsg = 4
 			else :
 				try:
 					dist = np.zeros(4)
