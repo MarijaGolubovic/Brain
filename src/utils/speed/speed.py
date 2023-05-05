@@ -270,8 +270,14 @@ class Speed(WorkerProcess):
 
 		
 	def lane_keeping(self):
-		print("++++++++++++++++++++++++++++++U LANE KEEPING")
-		msg = {'action': '1', 'speed': 0.30}
+		idi_desno = -1
+		isao_levo = -1
+		idi_duze = False
+		idi_duze_lijevo = False
+		iterator = 0
+		lijevo = 0
+		msg = {'action': '1', 'speed': 0.35}
+		#print("++++++++++++++++++++++++++++++U LANE KEEPING")
 		if self.lines is None:
 			isDetected = False
 		else:
@@ -279,39 +285,87 @@ class Speed(WorkerProcess):
 			averaged_lines, isDetected, direction = self.average(self.copy_frame, self.lines)
 			#print(self.copy_frame.shape)
 			#print(averaged_lines)
-			#print(direction)
+			print("#########################",direction)
 		if isDetected:
 			black_lines = self.display_lines(self.copy_frame, averaged_lines)
 			#print(black_lines)
 			self.lanes = cv2.addWeighted(self.copy_frame, 0.8, black_lines, 1, 1)
 			print(self.lanes.shape)
-			if self.prev == 4 and self.pick_left_line >= 2 and self.ignore_left_line == False:
+			if self.prev == 4 and self.pick_left_line >= 3 and self.ignore_left_line == False:
 				msg = {'action': '2', 'steerAngle': 18.0}
-				selfprev = -100
+				self.prev = -100
 				self.pick_left_line = 0
 			else:
 				if direction == 1:
-					msg = {'action': '2', 'steerAngle': -22.0}
+					msg = {'action': '2', 'steerAngle': -9.0}
+					isao_levo = 1
+					idi_duze_lijevo = True
 					self.ignore_left_line =  True
 				elif direction == 2:
 					if self.isRight == 1:
-						msg = {'action': '2', 'steerAngle': 22.0}
+						msg = {'action': '2', 'steerAngle': 9.0}
 						self.ignore_left_line = False
+						idi_duze = True
+						print("IDI DUZE IDI DUZE IDI DUZE IDI DUZE")
 					else:
 						msg = {'action': '2', 'steerAngle': 0.0}
 				elif direction == 4:
-					if self.pick_left_line < 2:
-						msg = {'action': '2', 'steerAngle': -18.0}
-						self.pick_left_line = self.pick_left_line + 1
+					if isao_levo == 1:
+						print("PROBLEEEEEEEEEEEEEEEEM")
+						msg = {'action': '2', 'steerAngle': 22.0}
+						#for outP in self.outPs:
+						#	outP.send(msg)
+						#time_start = time.time()
+						#time_end = time.time()
+						#print("----------TIME TIME TIME TIME TIME:", time_end - time_start)
+						#while time_end -time_start < 0.20:
+						#	time_end = time.time()
+						isao_levo = 0
+						#self.flag = 0 
+					else:
+						if self.pick_left_line < 3:
+							msg = {'action': '2', 'steerAngle': -18.0}
+							self.pick_left_line = self.pick_left_line + 1
 				else:
 					msg = {'action': '2', 'steerAngle': 0.0}
 					self.ignore_left_line = False
 					self.isRight = 0
-				self.prev = direction
-			for outP in  self.outPs:
-				outP.send(msg)
-				self.flag = 0
+			self.prev = direction
+			if idi_duze == True:
+				print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+				time_start = time.time()
+				time_end = time.time()
+				print("----------TIME TIME TIME TIME TIME:", time_end - time_start)
+				while time_end -time_start < 0.20:
+					time_end = time.time()
+				print("TIME TIME TIME TIME TIME:", time_end - time_start)
+				iterator = -100
+			if idi_duze_lijevo == True:
+				time_start = time.time()
+				time_end = time.time()
+                            	#print("----------TIME TIME TIME TIME TIME:", time_end - time_start)
+				while time_end -time_start < 0.20:
+					time_end = time.time()
+                                #print("TIME TIME TIME TIME TIME:", time_end - time_start)
+				lijevo = -100
+			if idi_duze == False:
+				for outP in  self.outPs:
+					outP.send(msg)
+					self.flag = 0
+			elif idi_duze_lijevo == True:
+				if lijevo == -100:
+					for outP in  self.outPs:
+						outP.send(msg)
+						self.flag = 0
+						lijevo = False
+			else:
+				if iterator == -100:
+					for outP in self.outPs:
+						outP.send(msg)
+						self.flag = 0
+						idi_duze = False
 		else:
+			print("copy_frame: ",  self.copy_frame.shape)
 			self.lanes = self.copy_frame
 			print("NO lANES")
 			print(self.prev)
