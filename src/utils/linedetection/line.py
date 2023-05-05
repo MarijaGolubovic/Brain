@@ -932,6 +932,7 @@ class LineDetection(WorkerProcess):
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
+					#finish = True
 					#inParking = -100
 					#parkiraj_se = False #ovim se bl;okira DA NE UPADA VISE PUTA U PARKING
 					#tmp = -1
@@ -1097,12 +1098,12 @@ class LineDetection(WorkerProcess):
 						self.polEnc += self.encIm
 						if self.polEnc < 2600:
 							self.lane_keeping()
-						elif 2600 <= self.polEnc < 3100:
+						elif 2600 <= self.polEnc < 3050:
 							msg = {'action': '2', "steerAngle": -22.0}
 							for outP in outPs:
 								outP.send(msg)
 							self.flag = 0
-						elif 3100 <= self.polEnc < 3300:
+						elif 3050 <= self.polEnc < 3300:
 							self.lane_keeping()
 						elif 3300 <= self.polEnc < 3400:
 							if self.TraficLightSrSecond == 0:
@@ -1119,8 +1120,13 @@ class LineDetection(WorkerProcess):
 								self.lane_keeping()
 						elif 3400 <= self.polEnc < 6400:
 							self.lane_keeping()
-						elif 6400 <= self.polEnc < 7100:
+						elif 6400 <= self.polEnc < 6850:
 							msg = {'action': '2', "steerAngle": -22.0}
+							for outP in outPs:
+								outP.send(msg)
+							self.flag = 0
+						elif 6850 <= self.polEnc < 7000:
+							msg = {'action': '2', "steerAngle": 0.0}
 							for outP in outPs:
 								outP.send(msg)
 							self.flag = 0
