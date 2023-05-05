@@ -51,6 +51,7 @@ from src.utils.linedetection.line                           import LineDetection
 from src.utils.IMU.IMUHandler                               import imu
 from src.utils.Stop.DistanceDetector                        import Distance 
 from src.utils.speed.speed                                        import Speed
+from src.utils.speed.speedSensor                            import SpeedSensor
 # =============================== CONFIG =================================================
 enableStream        =  True
 enableCameraSpoof   =  False 
@@ -64,16 +65,20 @@ allProcesses = list()
 # =============================== HARDWARE ===============================================
 if enableSpeed:
     camStR, camStS = Pipe(duplex = False)
-    rcShR, rcShS = Pipe(duplex = False)
+    rcShR, rcShS = Pipe(duplex = True)
     shShR, shShS   = Pipe(duplex = False)
+    hcShR, hcShS   = Pipe(duplex = False)
     
-    shProc = SerialHandlerProcess([rcShR],[])
+    
+    shProc = SerialHandlerProcess([hcShR],[shShS])
     allProcesses.append(shProc) 
-   
+    
+    spd = SpeedSensor([rcShR],[hcShS])
+    allProcesses.append(spd)
     camProc = CameraProcess([], [camStS])
     allProcesses.append(camProc)
 
-    spdProc = Speed([camStR],[rcShS])
+    spdProc = Speed([camStR],[rcShS],[shShR])
     allProcesses.append(spdProc) 
     
 if enableStream:

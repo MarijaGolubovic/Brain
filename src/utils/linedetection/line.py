@@ -691,7 +691,7 @@ class LineDetection(WorkerProcess):
 				self.pick_left_line = 0
 			else:
 				if direction == 1:
-					msg = {'action': '2', 'steerAngle': -15.0}
+					msg = {'action': '2', 'steerAngle': -9.0}
 					isao_levo = 1
 					idi_duze_lijevo = True
 					self.ignore_left_line =  True
