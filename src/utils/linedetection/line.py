@@ -828,7 +828,7 @@ class LineDetection(WorkerProcess):
 						print("ITS OKAY")
 					"""
 					############################################ OBAVEZNO MJENJATI #####################################################
-					self.TraficLightSr =2
+					#self.TraficLightSr =2
 					print("SERVER IS:", isTraficLight , "STANJE SEMAFORA" ,self.TraficLightSr)
 					if isTraficLight == True:
 						if self.TraficLightSr == 0:
@@ -840,8 +840,8 @@ class LineDetection(WorkerProcess):
 							for outP in outPs:
 								outP.send(msg)
 							isTraficLight = False
-							
-						
+							#isStop = False
+							#sign = 2
 
 						"""
 						if isTraficLight == True:
@@ -1136,30 +1136,31 @@ class LineDetection(WorkerProcess):
 							self.ObstacleID = 1
 							time = time + 1
 							print("Time: ", time)
-							if time < 20:
+							if time < 6:
 								print("U if-u")
 								msg = {'action': '1', 'speed': 0.0}
 								for outP in outPs:
 									print("salje")
 									outP.send(msg)
 									self.flag = 0
-							elif time == 10:
-								msg = {'action': '2', "steerAngle": 0.0}
+							elif time == 6:
+								msg = msg = {'action': '1', 'speed': 0.12}
 								for outP in outPs:
 									outP.send(msg)
-							elif 10 < time < 18: #raskrsnica
+								"""elif 10 < time < 18: #raskrsnica
 								msg = {'action': '1', 'speed': 0.12}
 								for outP in outPs:
 									outP.send(msg)
 									self.flag = 0
-							elif  18 <= time < 19:
+								elif  18 <= time < 19:
 								msg = {'action': '2', 'steerAngle': 22.0}
 								for outP in outPs:
 									outP.send(msg)
-							elif time == 20:
+								elif time == 20:
 								msg = {'action': '2', 'steerAngle': 0.0}
 								for outP in outPs:
 									outP.send(msg)
+								"""
 							else:
 								isStop = True
 								ne_radi_stop = True
