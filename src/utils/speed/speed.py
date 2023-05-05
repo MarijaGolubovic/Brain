@@ -330,7 +330,7 @@ class Speed(WorkerProcess):
 		
 	def lane_keeping(self):
 		print("++++++++++++++++++++++++++++++U LANE KEEPING")
-		msg = {'action': '1', 'speed': 0.50}
+		msg = {'action': '1', 'speed': 0.30}
 		if self.lines is None:
 			isDetected = False
 		else:
@@ -406,7 +406,7 @@ class Speed(WorkerProcess):
 		mozes_prvenstvo = False
 		detecSighn = "glupost"
 		num_frame = 0
-		msg = {'action': '1', 'speed': 0.00}
+		msg = {'action': '1', 'speed': 0.30}
 		for outP in outPs:
 			outP.send(msg)
 		while True:

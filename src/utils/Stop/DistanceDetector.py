@@ -74,11 +74,12 @@ class Distance(WorkerProcess):
 			
 		while self.pi.read(GPIO_ECHO) == 1:
 			StopTime = time.time()
+			"""
 			pom = pom + 1
 			if pom == 25:
 				pom = 0
 				break
-			
+			"""
 
 		TimeElapsed = StopTime - StartTime
 		distance = TimeElapsed * 34300 / 2
@@ -121,6 +122,7 @@ class Distance(WorkerProcess):
 			pommsg = 0
 			flagBokDis = True
 			command = self.inPs[0].recv()
+			print("RADI BILO STA ..............................")
 			if command == {'action': '1', 'speed': -0.12}:
 				flagBokDis = False
 			try:

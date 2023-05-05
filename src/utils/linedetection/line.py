@@ -39,7 +39,8 @@ class LineDetection(WorkerProcess):
 		self.encIm = 0
 		self.polEnc = 0
 		
-		self.can_be_parking = False
+		#################################################### OBAVEZNO PROVJERITI ###########################################################
+		self.can_be_parking = True
 		self.TraficLightSrSecond = -1
 		self.can_be_priority = False
 		
@@ -553,7 +554,7 @@ class LineDetection(WorkerProcess):
 			#print("S2 color " + colors[Semaphores.s2_state] + ", code " + str(Semaphores.s2_state) + ".")
 			#print("S3 color " + colors[Semaphores.s3_state] + ", code " + str(Semaphores.s3_state) + ".")
 			#print("S4 color " + colors[Semaphores.s4_state] + ", code " + str(Semaphores.s4_state) + ".")
-			self.TraficLightSr = Semaphores.s3_state
+			self.TraficLightSr = Semaphores.s3_state #START
 			self.TraficLightSrSecond = Semaphores.s1_state
 			#print("cwegyewf " + str(self.TraficLightSr.s1_state))
 			time.sleep(0.5)
@@ -759,6 +760,7 @@ class LineDetection(WorkerProcess):
 						isTraficLight = True
 						print("ITS OKAY")
 					"""
+					############################################ OBAVEZNO MJENJATI #####################################################
 					self.TraficLightSr =2
 					print("SERVER IS:", isTraficLight , "STANJE SEMAFORA" ,self.TraficLightSr)
 					if isTraficLight == True:
@@ -863,12 +865,14 @@ class LineDetection(WorkerProcess):
 					print("Sign: ", sign)
 					print(isStop)
 					print(inParking)
-					#inParking = 1
-					parkiraj_se = False
+					inParking = -100
+					#parkiraj_se = False #ovim se bl;okira DA NE UPADA VISE PUTA U PARKING
 					#tmp = -1
 					if inParking == 1 and parkiraj_se == False and self.can_be_parking == True:
 						print("||||||||||||||||||||||||||||||||||||||||||||", self.Dis)
 						print("__________________111111111111 ", inParkingTime)
+						if self.Dis != 0 and self.Dis != 1:
+							self.Dis = 0
 						if self.Dis == 0:
 							if inParkingTime == 0:
 								msg = {'action': '2', 'steerAngle': 0.0}
@@ -884,15 +888,15 @@ class LineDetection(WorkerProcess):
 								for outP in outPs:
 									outP.send(msg)
 									flag = 0"""
-								self.lane_keeping()
+								#self.lane_keeping()
 								#self.polEnc += self.encIm
-								#if self.polEnc < 750:
-								#	self.lane_keeping()
-								#else:
-								#	msg = {'action': '1', 'speed': 0.0}
-								#	for outP in outPs:
-								#		outP.send(msg)
-								#	self.flag = 0
+								if self.polEnc < 750:
+									self.lane_keeping()
+								else:
+									msg = {'action': '1', 'speed': 0.0}
+									for outP in outPs:
+										outP.send(msg)
+									self.flag = 0
 							if inParkingTime == 50:
 								print("303030303030303030303030303030")
 								msg = {'action': '2', 'steerAngle': 0.0}
@@ -978,11 +982,13 @@ class LineDetection(WorkerProcess):
 							msg = {'action': '2', 'steerAngle': 0.0}
 							for outP in outPs:
 								outP.send(msg)
-								self.flag = 0
+							self.flag = 0
 							#msg = {'action': '1', 'speed': 0.12}
 							#for outP in outPs:
 							#		outP.send(msg)
 							#		self.flag = 0
+						else:
+							self.Dis = 0
 						"""self.polEnc += abs(self.encIm)
 						print("in parkingggggggggggggggggggggggg", self.polEnc)
 						if self.polEnc < 100:
@@ -1086,6 +1092,7 @@ class LineDetection(WorkerProcess):
 							mozes_prvenstvo = False
 							self.polEnc = 0
 							finish = True
+						self.flag = 0
 						time_p += 1
 						print("########: ",time_p)
 					else:
@@ -1140,7 +1147,7 @@ class LineDetection(WorkerProcess):
 							if self.polEnc < 1500:
 								self.lane_keeping()
 							else:
-								is_priority = True
+								is_priority = True #FORSIRAJ LEVO
 								mozes_prvenstvo = True	
 								self.can_be_priority = True
 								finish = False
