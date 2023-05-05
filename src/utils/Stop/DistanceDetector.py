@@ -74,6 +74,10 @@ class Distance(WorkerProcess):
 			
 		while self.pi.read(GPIO_ECHO) == 1:
 			StopTime = time.time()
+			pom = pom + 1
+			if pom == 25:
+				pom = 0
+				break
 			
 
 		TimeElapsed = StopTime - StartTime
@@ -119,7 +123,12 @@ class Distance(WorkerProcess):
 			command = self.inPs[0].recv()
 			if command == {'action': '1', 'speed': -0.12}:
 				flagBokDis = False
-			pitch = self.imuMesurment()
+			try:
+				pitch = self.imuMesurment()
+				#pitch = 0
+			except Exception as e:
+				pitch = 0
+				print("IMU EXCEPTION: ", E)
 			if num_of_ditections == 10:
 				if 0 <= com_num < 8:
 					com_num = com_num +1
@@ -155,24 +164,34 @@ class Distance(WorkerProcess):
 					command = {'action': '2', 'steerAngle': 0.0}
 					com_num = 0 
 					num_of_ditections = 0
+					pommsg = 3
+				else:
+					print("Ne definisano stanje je ", com_num)
+			
 			elif pitch < -10:
 				command = {'action': '1', 'speed': 0.09}
+				pommsg = 4
 			elif pitch > 10:
 				command = {'action': '1', 'speed': 0.15}
 			else :
-				dist = np.zeros(4)
-				for i in range (0, 4):
-					dist[i] = self.distance(dist, self.GPIO_TRIGER2, self.GPIO_ECHO2)
-				dista1 = np.average(dist)
-				#time.sleep(0.2)
-				print("Udaljenost dva je = %.1f cm" % dista1)
-				
-				dist = np.zeros(4)
-				for i in range (0, 4):
-					dist[i] = self.distance(dist, self.GPIO_TRIGER3, self.GPIO_ECHO3)
-				dista2 = np.average(dist)
-				#time.sleep(0.2)
-				print("Udaljenost je tri = %.1f cm" % dista2)
+				try:
+					dist = np.zeros(4)
+					for i in range (0, 4):
+						dist[i] = self.distance(dist, self.GPIO_TRIGER2, self.GPIO_ECHO2)
+					dista1 = np.average(dist)
+					#time.sleep(0.2)
+					print("Udaljenost dva je = %.1f cm" % dista1)
+				except Exception as e:
+					print("Greska u senozru 2 !!!!!!!", e)
+				try:
+					dist = np.zeros(4)
+					for i in range (0, 4):
+						dist[i] = self.distance(dist, self.GPIO_TRIGER3, self.GPIO_ECHO3)
+					dista2 = np.average(dist)
+					#time.sleep(0.2)
+					print("Udaljenost je tri = %.1f cm" % dista2)
+				except Exception as e:
+					print("Greska u senozru 3 !!!!!!!", e)
 				if dista1 < 10 or dista2 < 10:
 					pommsg = 1
 				else:
@@ -196,17 +215,21 @@ class Distance(WorkerProcess):
 						if block == 1:
 							command = {'action': '1', 'speed': 0.12}
 						block = 0;
+						#pommsg = 0
 						num_of_ditections = 0
 					#print(command)
 					"""for outP in self.outPs:
 						outP.send(command)"""
 					#print("55555555")
-				except:
+				except Exception as e:
 					block = 0
+					print("Greska u senzoru 1!!!!!!!!!!! ",e)
+					#pommsg = 0
 					#print("*****************")
 			for outP in self.outPs:
 				outP.send(command)
 			for outP in self.inPs:
 				outP.send(pommsg)
+			print("SEND DATA IS : ",pommsg)
 	def stop(self):
 		self.pi.stop()

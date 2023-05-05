@@ -405,6 +405,7 @@ class Speed(WorkerProcess):
 		ne_radi_stop = False
 		mozes_prvenstvo = False
 		detecSighn = "glupost"
+		num_frame = 0
 		msg = {'action': '1', 'speed': 0.00}
 		for outP in outPs:
 			outP.send(msg)
@@ -412,21 +413,112 @@ class Speed(WorkerProcess):
 			try:
 				if self.flag == 1:
 					#msg = {"action": '1', 'speed': 0.09}
+					print("!!!!!!!!!!!!!!!!!!!!!!!:  ", num_frame)
 					stamps, frame = inP.recv()
 					self.lanes = frame
 					self.copy_frame = frame.copy()
-
+					num_frame = num_frame + 1
 					#copy_frame =  cv2.cvtColor(copy_frame, cv2.COLOR_BGR2RGB)	
 					#height_signs, width_signs, _ = frame.shape
 					#h, w, _ = frame.shape
-					grey = self.gray(frame)
-					blur = self.gauss(grey)
+					if num_frame < 100: # OD STARTA DO ISKLJUCENJA DO KRIVUDAVE
+						grey = self.gray(frame)
+						blur = self.gauss(grey)
 					
-					edges = cv2.Canny(blur, 50, 150)
-					isolated = self.region(edges)
-					self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
-					self.lane_keeping()
+						edges = cv2.Canny(blur, 50, 150)
+						isolated = self.region(edges)
+						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
+						self.lane_keeping()
+					elif num_frame == 100: # DA UDJE NA KRIVUDAVI DEO
+						msg = {'action': '2', 'steerAngle': 0.0}
+						for outP in self.outPs:
+                        				outP.send(msg)
+                        		
+					elif num_frame < 105 and num_frame > 100:
+						msg = {'action': '1', 'speed': 0.30}
+						for outP in self.outPs:
+		        				outP.send(msg)
+					elif num_frame > 104 and num_frame < 250 : # OD KRIVUDAVI DEO
+						grey = self.gray(frame)
+						blur = self.gauss(grey)
+						edges = cv2.Canny(blur, 50, 150)
+						solated = self.region(edges)
+						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
+						self.lane_keeping()
+					elif num_frame > 249 and num_frame < 255: # OD KRIVUDAVOG DO KRUZNOG
+						msg = {'action': '1', 'speed': 0.30}
+						for outP in self.outPs:
+                        				outP.send(msg)
+					elif num_frame == 255:
+						msg = {'action': '2', 'steerAngle': -22.0}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame > 255 and num_frame < 258:
+						msg = {'action': '1', 'speed': 0.30}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame == 258:
+						msg = {'action': '2', 'steerAngle': 0.0}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame > 258 and num_frame > 260:
+						msg = {'action': '1', 'speed': 0.30}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame > 259 and num_frame > 265: # DEO KRUZNOG TOKA
+						grey = self.gray(frame)
+						blur = self.gauss(grey)
 					
+						edges = cv2.Canny(blur, 50, 150)
+						isolated = self.region(edges)
+						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
+						self.lane_keeping()
+					elif num_frame == 265:
+						msg = {'action': '2', 'steerAngle': -22.0}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame > 265 and num_frame < 270:
+						msg = {'action': '1', 'speed': 0.30}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame > 269 and num_frame < 410:
+						grey = self.gray(frame)
+						blur = self.gauss(grey)
+					
+						edges = cv2.Canny(blur, 50, 150)
+						isolated = self.region(edges)
+						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
+						self.lane_keeping()
+					elif num_frame == 410:
+						msg = {'action': '2', 'steerAngle': -22.0}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame > 410 and num_frame < 415:
+						msg = {'action': '1', 'speed': 0.30}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame == 415:
+						msg = {'action': '2', 'steerAngle': 0.0}
+						for outP in self.outPs:
+							outP.send(msg)
+					elif num_frame > 415 and num_frame < 420:
+						msg = {'action': '1', 'speed': 0.30}
+						for outP in self.outPs:
+                        				outP.send(msg)
+					elif num_frame > 420 and num_frame < 435:
+						grey = self.gray(frame)
+						blur = self.gauss(grey)
+					
+						edges = cv2.Canny(blur, 50, 150)
+						isolated = self.region(edges)
+						self.lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 70, np.array([]), minLineLength=35, maxLineGap=5)
+						self.lane_keeping()
+					elif num_frame == 435:
+						msg = {'action': '1', 'speed': 0.00}
+						for outP in self.outPs:
+							outP.send(msg)
+					else:
+						print("MISSING FRAME AND UNSORTED: ", num_frame)
 				else:
 					stamps, frame = inP.recv()
 					#lanes = frame
@@ -457,4 +549,4 @@ class Speed(WorkerProcess):
 		for outP in self.outPs:
 			outP.send(msg)
 			print(msg)
-		super(LineDetection,self).stop()  
+		super(LineDetection,self).stop() 
